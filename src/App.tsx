@@ -3,7 +3,7 @@ import type { Map } from "mapbox-gl";
 import GeoloniaMap from "./GeoloniaMap";
 
 const App: React.FC = () => {
-  const mapRef = useRef<Map>()
+  const mapRef = useRef<Map>();
   
   const onLoad = useCallback((map) => {
     mapRef.current = map;
@@ -13,10 +13,12 @@ const App: React.FC = () => {
     <GeoloniaMap 
       style={{ width: "100vw", height: "100vh" }}
       options={{
-        zoom: 6,
-        center: [136.944, 35.645],
-        fullscreenControl: "on",
-        hash: "map",
+        "data-zoom": "6",
+        "data-lng": "136.944",
+        "data-lat": "35.645",
+        "data-fullscreen-control": "on",
+        "data-geolocate-control": "on",
+        "data-marker": "off",
       }}
       onLoad={onLoad}
     />

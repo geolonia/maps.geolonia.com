@@ -16,17 +16,18 @@ const GeoloniaMap: React.FC<Props> = (props) => {
     const { geolonia } = window;
     const map = new geolonia.Map({
       container: mapContainer.current,
-      ...options,
+      hash: "map",
     }) as Map;
     if (onLoad) {
       onLoad(map);
     }
-  }, [options, onLoad]);
+  }, [ onLoad ]);
 
   return (
     <div 
       ref={mapContainer} 
       style={props.style}
+      {...options}
     />
   );
 }
