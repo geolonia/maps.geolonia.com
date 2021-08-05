@@ -77,6 +77,7 @@ const App: React.FC = () => {
           "data-lat": "35.645",
           "data-fullscreen-control": "on",
           "data-geolocate-control": "on",
+          "data-gesture-handling": "off",
           "data-marker": "off",
           "data-style": styleIdToUrl(defaultStyleFromHash),
         }}
