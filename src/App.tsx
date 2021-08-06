@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map, IControl } from "mapbox-gl";
 import GeoloniaMap from "./GeoloniaMap";
 import ReactDOM from "react-dom";
@@ -36,13 +36,27 @@ const updateHash = (q: URLSearchParams) => {
   window.location.hash = '#' + q.toString().replace(/%2F/g, '/');
 }
 
-const styleIdToUrl = (id: string) => {
-  const [style, lang] = id.split(';');
-  return `https://cdn.geolonia.com/style/${style}/${lang}.json`;
+const styleIdToUrl = (style: string, lang?: string) => {
+  if (lang && lang !== 'auto') {
+    return `https://cdn.geolonia.com/style/${style}/${lang}.json`;
+  }
+  return style.split(';')[0];
 }
 
 const App: React.FC = () => {
   const mapRef = useRef<Map>();
+
+  const defaultStyleFromHash = useMemo(() => {
+    return parseHash().get('style') || "geolonia/basic";
+  }, []);
+
+  const defaultLanguageFromHash = useMemo(() => {
+    return parseHash().get('lang') || "auto";
+  }, []);
+
+  const [ style, setStyle ] = useState<string>(defaultStyleFromHash);
+  const [ language, setLanguage ] = useState<string>(defaultLanguageFromHash);
+
   const switcherControlDiv = useMemo(() => {
     const div = document.createElement('div');
     div.className = 'mapboxgl-ctrl';
@@ -57,15 +71,25 @@ const App: React.FC = () => {
 
   const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
     const val = ev.target.value;
-    const hash = parseHash();
-    hash.set('style', val);
-    updateHash(hash);
-    mapRef.current?.setStyle( styleIdToUrl(val) );
+    setStyle(val);
   }, []);
 
-  const defaultStyleFromHash = useMemo(() => {
-    return parseHash().get('style') || "geolonia/basic;ja";
+  const onMapLanguageChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
+    const val = ev.target.value;
+    setLanguage(val);
   }, []);
+
+  useEffect(() => {
+    const hash = parseHash();
+    hash.set('style', style);
+    if (language && language !== 'auto') {
+      hash.set('lang', language);
+    } else {
+      hash.delete('lang');
+    }
+    updateHash(hash);
+    mapRef.current?.setStyle( styleIdToUrl(style, language) );
+  }, [ style, language ]);
 
   return (
     <>
@@ -84,11 +108,22 @@ const App: React.FC = () => {
         onLoad={onLoad}
       />
       <Portal container={switcherControlDiv}>
-        <select onChange={onMapStyleChange} defaultValue={defaultStyleFromHash}>
-          <option value="geolonia/basic;ja">Basic (日本語)</option>
-          <option value="geolonia/basic;en">Basic (English)</option>
-          <option value="geolonia/gsi;ja">GSI (日本語)</option>
-          <option value="geolonia/gsi;en">GSI (English)</option>
+        <select
+          onChange={onMapStyleChange}
+          defaultValue={defaultStyleFromHash}
+          style={{ marginRight: "10px" }}
+        >
+          <option value="geolonia/basic">Basic</option>
+          <option value="geolonia/gsi">GSI</option>
+          <option value="geolonia/homework">Homework</option>
+          <option value="geolonia/midnight">Midnight</option>
+          <option value="geolonia/notebook">Notebook</option>
+          <option value="geolonia/red-planet">Red Planet</option>
+        </select>
+        <select onChange={onMapLanguageChange} defaultValue={defaultLanguageFromHash}>
+          <option value="auto">Auto / 自動判定</option>
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
         </select>
       </Portal>
     </>
