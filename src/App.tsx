@@ -44,6 +44,7 @@ const styleIdToUrl = (style: string, lang?: string) => {
 }
 
 const App: React.FC = () => {
+  const [ zLatLngString, setZLatLngString ] = useState<string>("");
   const mapRef = useRef<Map>();
 
   const defaultStyleFromHash = useMemo(() => {
@@ -67,6 +68,19 @@ const App: React.FC = () => {
     mapRef.current = map;
     const switcherControl = new PortalControl(switcherControlDiv);
     map.addControl(switcherControl, 'top-left');
+
+    map.on('moveend', () => {
+      // see: https://github.com/maplibre/maplibre-gl-js/blob/ba7bfbc846910c5ae848aaeebe4bde6833fc9cdc/src/ui/hash.js#L59
+      const center = map.getCenter(),
+        zoom = Math.round(map.getZoom() * 100) / 100,
+        // derived from equation: 512px * 2^z / 360 / 10^d < 0.5px
+        precision = Math.ceil((zoom * Math.LN2 + Math.log(512 / 360 / 0.5)) / Math.LN10),
+        m = Math.pow(10, precision),
+        lng = Math.round(center.lng * m) / m,
+        lat = Math.round(center.lat * m) / m,
+        zStr = Math.ceil(zoom);
+      setZLatLngString(`#map=${zStr}/${lat}/${lng}`);
+    });
   }, [switcherControlDiv]);
 
   const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
@@ -120,11 +134,23 @@ const App: React.FC = () => {
           <option value="geolonia/notebook">Notebook</option>
           <option value="geolonia/red-planet">Red Planet</option>
         </select>
-        <select onChange={onMapLanguageChange} defaultValue={defaultLanguageFromHash}>
+        <select
+          onChange={onMapLanguageChange}
+          defaultValue={defaultLanguageFromHash}
+          style={{ marginRight: "10px" }}
+        >
           <option value="auto">Auto / 自動判定</option>
           <option value="ja">日本語</option>
           <option value="en">English</option>
         </select>
+        <a
+          href={`https://openstreetmap.org/${zLatLngString}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ext openstreetmap-link"
+        >
+          OpenStreetMap で開く
+        </a>
       </Portal>
     </>
   );

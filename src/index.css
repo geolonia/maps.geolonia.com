@@ -6,3 +6,23 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+a.ext:after {
+  content: '';
+  background: url(data:image/svg+xml;utf8;base64,IDxzdmcgaGVpZ2h0PSIxMDI0IiB3aWR0aD0iNzY4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik02NDAgNzY4SDEyOFYyNTcuOTA1OTk5OTk5OTk5OTVMMjU2IDI1NlYxMjhIMHY3NjhoNzY4VjU3Nkg2NDBWNzY4ek0zODQgMTI4bDEyOCAxMjhMMzIwIDQ0OGwxMjggMTI4IDE5Mi0xOTIgMTI4IDEyOFYxMjhIMzg0eiIvPjwvc3ZnPg==);
+  background-size: cover;
+  display: inline-block;
+  width: .8em;
+  height: 1em;
+  top: .05em;
+  position: relative;
+  left: .2em;
+  margin-right: .2em;
+  opacity: .8;
+}
+
+.openstreetmap-link,
+.openstreetmap-link:hover,
+.openstreetmap-link:visited {
+  color: black;
+}
