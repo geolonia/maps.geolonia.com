@@ -55,6 +55,8 @@ const App: React.FC = () => {
     return parseHash().get('lang') || "auto";
   }, []);
 
+  const defaultStyleUrl = styleIdToUrl(defaultStyleFromHash, defaultLanguageFromHash);
+
   const [ style, setStyle ] = useState<string>(defaultStyleFromHash);
   const [ language, setLanguage ] = useState<string>(defaultLanguageFromHash);
 
@@ -102,8 +104,11 @@ const App: React.FC = () => {
       hash.delete('lang');
     }
     updateHash(hash);
-    mapRef.current?.setStyle( styleIdToUrl(style, language) );
-  }, [ style, language ]);
+    const newStyleUrl = styleIdToUrl(style, language);
+    if (defaultStyleUrl !== newStyleUrl) {
+      mapRef.current?.setStyle( newStyleUrl );
+    }
+  }, [ style, language, defaultStyleUrl ]);
 
   return (
     <>
@@ -117,7 +122,8 @@ const App: React.FC = () => {
           "data-geolocate-control": "on",
           "data-gesture-handling": "off",
           "data-marker": "off",
-          "data-style": styleIdToUrl(defaultStyleFromHash),
+          "data-3d": "on",
+          "data-style": defaultStyleUrl,
         }}
         onLoad={onLoad}
       />

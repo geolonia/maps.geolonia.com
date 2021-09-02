@@ -16,7 +16,7 @@ const GeoloniaMap: React.FC<Props> = (props) => {
     const { geolonia } = window;
     const map = new geolonia.Map({
       container: mapContainer.current,
-      hash: "map",
+      hash: 'map',
     }) as Map;
     if (onLoad) {
       onLoad(map);
@@ -24,8 +24,8 @@ const GeoloniaMap: React.FC<Props> = (props) => {
   }, [ onLoad ]);
 
   return (
-    <div 
-      ref={mapContainer} 
+    <div
+      ref={mapContainer}
       style={props.style}
       {...options}
     />
