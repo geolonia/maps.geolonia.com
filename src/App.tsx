@@ -34,26 +34,68 @@ const parseHash = () => {
 
 const updateHash = (q: URLSearchParams) => {
   window.location.hash = '#' + q.toString().replace(/%2F/g, '/');
-}
+};
 
 const styleIdToUrl = (style: string, lang?: string) => {
   if (lang && lang !== 'auto') {
     return `https://cdn.geolonia.com/style/${style}/${lang}.json`;
   }
   return style.split(';')[0];
+};
+
+interface InitialSavedState {
+  z: number
+  lat: number
+  lng: number
+  style: string
+  lang: string
 }
+
+const INITIAL_STATE: InitialSavedState = {
+  z: 6,
+  lng: 136.944,
+  lat: 35.645,
+  style: 'geolonia/basic',
+  lang: 'auto',
+};
+
+const getCurrentSavedState = () => {
+  let state: InitialSavedState = INITIAL_STATE;
+  try {
+    let rawState: string | null;
+    if ('localStorage' in window && (rawState = localStorage.getItem('geolstate')) && rawState) {
+      state = {
+        ...INITIAL_STATE,
+        ...JSON.parse(rawState)
+      } as InitialSavedState;
+    }
+  } catch {} finally {
+    return state;
+  }
+};
 
 const App: React.FC = () => {
   const [ zLatLngString, setZLatLngString ] = useState<string>("");
   const mapRef = useRef<Map>();
 
-  const defaultStyleFromHash = useMemo(() => {
-    return parseHash().get('style') || "geolonia/basic";
+  const savedState = useMemo(getCurrentSavedState, []);
+
+  const setSavedState = useCallback((input: Partial<InitialSavedState>) => {
+    const currentState = getCurrentSavedState();
+    const newState: InitialSavedState = {...currentState, ...input};
+    const rawState = JSON.stringify(newState);
+    try {
+      window.localStorage.setItem('geolstate', rawState);
+    } catch (e) {}
   }, []);
 
+  const defaultStyleFromHash = useMemo(() => {
+    return parseHash().get('style') || savedState.style;
+  }, [savedState.style]);
+
   const defaultLanguageFromHash = useMemo(() => {
-    return parseHash().get('lang') || "auto";
-  }, []);
+    return parseHash().get('lang') || savedState.lang;
+  }, [savedState.lang]);
 
   const defaultStyleUrl = styleIdToUrl(defaultStyleFromHash, defaultLanguageFromHash);
 
@@ -74,26 +116,31 @@ const App: React.FC = () => {
     map.on('moveend', () => {
       // see: https://github.com/maplibre/maplibre-gl-js/blob/ba7bfbc846910c5ae848aaeebe4bde6833fc9cdc/src/ui/hash.js#L59
       const center = map.getCenter(),
-        zoom = Math.round(map.getZoom() * 100) / 100,
+        rawZoom = map.getZoom(),
+        zoom = Math.round(rawZoom * 100) / 100,
         // derived from equation: 512px * 2^z / 360 / 10^d < 0.5px
         precision = Math.ceil((zoom * Math.LN2 + Math.log(512 / 360 / 0.5)) / Math.LN10),
         m = Math.pow(10, precision),
         lng = Math.round(center.lng * m) / m,
         lat = Math.round(center.lat * m) / m,
         zStr = Math.ceil(zoom);
+
       setZLatLngString(`#map=${zStr}/${lat}/${lng}`);
+      setSavedState({ z: rawZoom, lat, lng });
     });
-  }, [switcherControlDiv]);
+  }, [setSavedState, switcherControlDiv]);
 
   const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
     const val = ev.target.value;
     setStyle(val);
-  }, []);
+    setSavedState({ style: val });
+  }, [setSavedState]);
 
   const onMapLanguageChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
     const val = ev.target.value;
     setLanguage(val);
-  }, []);
+    setSavedState({ lang: val });
+  }, [setSavedState]);
 
   useEffect(() => {
     const hash = parseHash();
@@ -115,9 +162,9 @@ const App: React.FC = () => {
       <GeoloniaMap
         style={{ width: "100vw", height: "100vh" }}
         options={{
-          "data-zoom": "6",
-          "data-lng": "136.944",
-          "data-lat": "35.645",
+          "data-zoom": savedState.z,
+          "data-lng": savedState.lng,
+          "data-lat": savedState.lat,
           "data-fullscreen-control": "on",
           "data-geolocate-control": "on",
           "data-gesture-handling": "off",
