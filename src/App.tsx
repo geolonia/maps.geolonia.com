@@ -170,6 +170,7 @@ const App: React.FC = () => {
           "data-gesture-handling": "off",
           "data-marker": "off",
           "data-3d": "on",
+          "data-scale-control": "bottom-right",
           "data-style": defaultStyleUrl,
         }}
         onLoad={onLoad}
