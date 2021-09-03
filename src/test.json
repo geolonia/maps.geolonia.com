@@ -1,0 +1,145 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76544,
+          35.68155
+        ]
+      },
+      "properties": {
+        "index": 0,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9-1東京駅"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76729,
+          35.68096
+        ]
+      },
+      "properties": {
+        "index": 1,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9-1東京駅"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76875,
+          35.68011
+        ]
+      },
+      "properties": {
+        "index": 2,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9-1東京駅一番街"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76678,
+          35.68183
+        ]
+      },
+      "properties": {
+        "index": 3,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9スタンドティー"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76547,
+          35.68156
+        ]
+      },
+      "properties": {
+        "index": 4,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9東京駅丸の内駅前広場"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76862,
+          35.68272
+        ]
+      },
+      "properties": {
+        "index": 5,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9-1東京駅 斑鳩"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76671,
+          35.68126
+        ]
+      },
+      "properties": {
+        "index": 6,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9-1利久 東京駅店"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76697,
+          35.67978
+        ]
+      },
+      "properties": {
+        "index": 7,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9-1T'Sたんたん 東京駅 京葉ストリート店"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76865,
+          35.68069
+        ]
+      },
+      "properties": {
+        "index": 8,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9Il Bar 東京駅一番街店"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.76785,
+          35.68041
+        ]
+      },
+      "properties": {
+        "index": 9,
+        "name": "〒100-0005 東京都千代田区丸の内1丁目9-1電光石火 東京駅店"
+      }
+    }
+  ]
+}

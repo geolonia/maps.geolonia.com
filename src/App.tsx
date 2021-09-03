@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Map, IControl } from "mapbox-gl";
+import type { LngLatBounds, Map, IControl } from "mapbox-gl";
 import GeoloniaMap from "./GeoloniaMap";
 import ReactDOM from "react-dom";
+import { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
+
+interface SearchFormControlsCollection extends HTMLFormControlsCollection {
+  q: HTMLInputElement
+}
 
 const Portal: React.FC<{container: HTMLDivElement}> = ({children, container}) => {
   return ReactDOM.createPortal(children, container);
@@ -108,10 +113,19 @@ const App: React.FC = () => {
     return div;
   }, []);
 
+  const searchControlDiv = useMemo(() => {
+    const div = document.createElement('div');
+    div.className = 'mapboxgl-ctrl';
+    return div;
+  }, []);
+
   const onLoad = useCallback((map: Map) => {
     mapRef.current = map;
     const switcherControl = new PortalControl(switcherControlDiv);
     map.addControl(switcherControl, 'top-left');
+
+    const searchControl = new PortalControl(searchControlDiv);
+    map.addControl(searchControl, 'top-left');
 
     map.on('moveend', () => {
       // see: https://github.com/maplibre/maplibre-gl-js/blob/ba7bfbc846910c5ae848aaeebe4bde6833fc9cdc/src/ui/hash.js#L59
@@ -128,7 +142,7 @@ const App: React.FC = () => {
       setZLatLngString(`#map=${zStr}/${lat}/${lng}`);
       setSavedState({ z: rawZoom, lat, lng });
     });
-  }, [setSavedState, switcherControlDiv]);
+  }, [searchControlDiv, setSavedState, switcherControlDiv]);
 
   const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
     const val = ev.target.value;
@@ -156,6 +170,117 @@ const App: React.FC = () => {
       mapRef.current?.setStyle( newStyleUrl );
     }
   }, [ style, language, defaultStyleUrl ]);
+
+  const handleSearch = useCallback<React.FormEventHandler<HTMLFormElement>>(async (ev) => {
+    ev.preventDefault();
+
+    const elements = ev.currentTarget.elements as SearchFormControlsCollection;
+    const query = elements.q.value;
+
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    const qsa = new URLSearchParams();
+    qsa.set('q', query);
+    const {lng, lat} = map.getCenter();
+    qsa.set('pos', `${lng},${lat}`);
+    const resp = await fetch(
+      `https://api.maps.geolonia.com/v1/search?${qsa.toString()}`, {
+        method: 'get',
+      }
+    )
+    const body = await resp.json();
+    if (body.error === true) {
+      console.error(body);
+      return;
+    }
+
+    const data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>
+
+    const source = map.getSource('search-results');
+    if (source) {
+      if (source.type !== 'geojson') return;
+      source.setData(data);
+    } else {
+      map.addSource('search-results', {
+        type: 'geojson',
+        data,
+      });
+    }
+
+    if (!map.getLayer('search-results-circle')) {
+      const textColor = '#000000';
+      const textHaloColor = '#FFFFFF';
+      const backgroundColor = 'rgba(255, 0, 0, 0.4)';
+      const strokeColor = '#FFFFFF';
+
+      map.addLayer({
+        id: 'search-results-circle',
+        type: 'circle',
+        source: 'search-results',
+        paint: {
+          'circle-radius': 13,
+          'circle-color': ['string', ['get', 'marker-color'], backgroundColor],
+          'circle-opacity': ['number', ['get', 'fill-opacity'], 1.0],
+          'circle-stroke-width': ['number', ['get', 'stroke-width'], 1],
+          'circle-stroke-color': ['string', ['get', 'stroke'], strokeColor],
+          'circle-stroke-opacity': ['number', ['get', 'stroke-opacity'], 1.0],
+        },
+      });
+
+      map.addLayer({
+        id: 'search-results-symbol',
+        type: 'symbol',
+        source: 'search-results',
+        layout: {
+          'text-field': ['get', 'index'],
+          'text-size': 14,
+          'text-font': ['Noto Sans Regular'],
+          'text-allow-overlap': true,
+        },
+      });
+
+      map.addLayer({
+        id: 'search-results-label',
+        type: 'symbol',
+        source: 'search-results',
+        paint: {
+          'text-color': ['string', ['get', 'text-color'], textColor],
+          'text-halo-color': ['string', ['get', 'text-halo-color'], textHaloColor],
+          'text-halo-width': 1,
+        },
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-font': ['Noto Sans Regular'],
+          'text-size': 12,
+          'text-anchor': 'top',
+          'text-max-width': 12,
+          'text-offset': [
+            'case',
+            ['==', 'small', ['get', 'marker-size']], ['literal', [0, 0.6]],
+            ['==', 'large', ['get', 'marker-size']], ['literal', [0, 1.2]],
+            ['literal', [0, 0.8]],
+          ],
+          'text-allow-overlap': false,
+        },
+      });
+    }
+
+    let bounds: LngLatBounds | undefined;
+    for (const f of data.features) {
+      if (f.geometry.type !== "Point") continue;
+      if (typeof bounds === 'undefined') {
+        //@ts-ignore
+        bounds = new geolonia.LngLatBounds(f.geometry.coordinates, f.geometry.coordinates);
+      } else {
+        bounds.extend(f.geometry.coordinates as [number, number]);
+      }
+    }
+    if (typeof bounds !== 'undefined') {
+      map.fitBounds(bounds, { padding: 200 });
+    }
+  }, []);
 
   return (
     <>
@@ -205,6 +330,15 @@ const App: React.FC = () => {
         >
           OpenStreetMap で開く
         </a>
+      </Portal>
+      <Portal container={searchControlDiv}>
+        <form id="searchControl" onSubmit={handleSearch}>
+          <input
+            type="search"
+            placeholder="検索..."
+            name="q"
+          />
+        </form>
       </Portal>
     </>
   );
