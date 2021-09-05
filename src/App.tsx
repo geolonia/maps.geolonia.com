@@ -3,6 +3,7 @@ import type { LngLatBounds, Map, IControl } from "mapbox-gl";
 import GeoloniaMap from "./GeoloniaMap";
 import ReactDOM from "react-dom";
 import { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
+import Div100vh from 'react-div-100vh'
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
@@ -284,22 +285,24 @@ const App: React.FC = () => {
 
   return (
     <>
-      <GeoloniaMap
-        style={{ width: "100vw", height: "100vh" }}
-        options={{
-          "data-zoom": savedState.z,
-          "data-lng": savedState.lng,
-          "data-lat": savedState.lat,
-          "data-fullscreen-control": "on",
-          "data-geolocate-control": "on",
-          "data-gesture-handling": "off",
-          "data-marker": "off",
-          "data-3d": "on",
-          "data-scale-control": "bottom-right",
-          "data-style": defaultStyleUrl,
-        }}
-        onLoad={onLoad}
-      />
+      <Div100vh>
+        <GeoloniaMap
+          style={{ width: "100vw", height: "100%"}}
+          options={{
+            "data-zoom": savedState.z,
+            "data-lng": savedState.lng,
+            "data-lat": savedState.lat,
+            "data-fullscreen-control": "on",
+            "data-geolocate-control": "on",
+            "data-gesture-handling": "off",
+            "data-marker": "off",
+            "data-3d": "on",
+            "data-scale-control": "bottom-right",
+            "data-style": defaultStyleUrl,
+          }}
+          onLoad={onLoad}
+        />
+      </Div100vh>
       <Portal container={switcherControlDiv}>
         <select
           onChange={onMapStyleChange}
