@@ -42,6 +42,9 @@ const updateHash = (q: URLSearchParams) => {
 };
 
 const styleIdToUrl = (style: string, lang?: string) => {
+  if (style.startsWith('https://')) {
+    return style;
+  }
   if (lang && lang !== 'auto') {
     return `https://cdn.geolonia.com/style/${style}/${lang}.json`;
   }
@@ -312,6 +315,7 @@ const App: React.FC = () => {
           <option value="geolonia/midnight">Midnight</option>
           <option value="geolonia/notebook">Notebook</option>
           <option value="geolonia/red-planet">Red Planet</option>
+          <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
         </select>
         <select
           onChange={onMapLanguageChange}
