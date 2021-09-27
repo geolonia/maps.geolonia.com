@@ -315,6 +315,7 @@ const App: React.FC = () => {
         <GeoloniaMap
           style={{ width: "100vw", height: "100%" }}
           initOptions={{ hash: 'map' }}
+          embedSrc="https://cdn.geolonia.com/dev/embed?geolonia-api-key=YOUR-API-KEY"
           fullscreenControl="on"
           geolocateControl="on"
           gestureHandling="off"
