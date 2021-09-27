@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LngLatBounds, Map, IControl } from "maplibre-gl";
-import { GeoloniaMap } from "@geolonia/embed-react";
-import ReactDOM from "react-dom";
-import { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
-import Div100vh from 'react-div-100vh'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { LngLatBounds, Map, IControl } from 'maplibre-gl';
+import { GeoloniaMap } from '@geolonia/embed-react';
+import ReactDOM from 'react-dom';
+import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
+import Div100vh from 'react-div-100vh';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
@@ -18,7 +18,7 @@ class PortalControl implements IControl {
   _container: HTMLDivElement;
 
   constructor(container: HTMLDivElement) {
-    this._container = container
+    this._container = container;
   }
 
   onAdd(map: Map) {
@@ -36,10 +36,10 @@ const parseHash = () => {
   const qstr = window.location.hash.substr(1);
   const q = new URLSearchParams(qstr);
   return q;
-}
+};
 
 const updateHash = (q: URLSearchParams) => {
-  window.location.hash = '#' + q.toString().replace(/%2F/g, '/');
+  window.location.hash = `#${q.toString().replace(/%2F/g, '/')}`;
 };
 
 const styleIdToUrl = (style: string, lang?: string) => {
@@ -75,12 +75,13 @@ const getCurrentSavedState = () => {
     if ('localStorage' in window && (rawState = localStorage.getItem('geolstate')) && rawState) {
       state = {
         ...INITIAL_STATE,
-        ...JSON.parse(rawState)
+        ...JSON.parse(rawState),
       } as InitialSavedState;
     }
-  } catch {} finally {
-    return state;
+  } catch {
+    // no-op
   }
+  return state;
 };
 
 const getDefaultCameraOptions = (state: InitialSavedState) => {
@@ -96,7 +97,7 @@ const getDefaultCameraOptions = (state: InitialSavedState) => {
 };
 
 const App: React.FC = () => {
-  const [ zLatLngString, setZLatLngString ] = useState<string>("");
+  const [ zLatLngString, setZLatLngString ] = useState<string>('');
   const mapRef = useRef<Map>();
 
   const savedState = useMemo(getCurrentSavedState, []);
@@ -107,7 +108,9 @@ const App: React.FC = () => {
     const rawState = JSON.stringify(newState);
     try {
       window.localStorage.setItem('geolstate', rawState);
-    } catch (e) {}
+    } catch {
+      // no-op
+    }
   }, []);
 
   const defaultStyleFromHash = useMemo(() => {
@@ -145,7 +148,6 @@ const App: React.FC = () => {
 
     const currentState = getCurrentSavedState();
     const cameraOptions = getDefaultCameraOptions(currentState);
-    console.log(currentState);
     map.jumpTo(cameraOptions);
 
     map.on('moveend', () => {
@@ -215,15 +217,16 @@ const App: React.FC = () => {
     const resp = await fetch(
       `https://api.maps.geolonia.com/v1/search?${qsa.toString()}`, {
         method: 'get',
-      }
-    )
+      },
+    );
     const body = await resp.json();
     if (body.error === true) {
+      // eslint-disable-next-line no-console
       console.error(body);
       return;
     }
 
-    const data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>
+    const data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>;
 
     const source = map.getSource('search-results');
     if (source) {
@@ -296,7 +299,7 @@ const App: React.FC = () => {
 
     let bounds: LngLatBounds | undefined;
     for (const f of data.features) {
-      if (f.geometry.type !== "Point") continue;
+      if (f.geometry.type !== 'Point') continue;
       if (typeof bounds === 'undefined') {
         //@ts-ignore
         bounds = new geolonia.LngLatBounds(f.geometry.coordinates, f.geometry.coordinates);
@@ -313,7 +316,7 @@ const App: React.FC = () => {
     <>
       <Div100vh>
         <GeoloniaMap
-          style={{ width: "100vw", height: "100%" }}
+          style={{ width: '100vw', height: '100%' }}
           initOptions={{ hash: 'map' }}
           embedSrc="https://cdn.geolonia.com/dev/embed?geolonia-api-key=YOUR-API-KEY"
           fullscreenControl="on"
@@ -330,7 +333,7 @@ const App: React.FC = () => {
         <select
           onChange={onMapStyleChange}
           defaultValue={defaultStyleFromHash}
-          style={{ marginRight: "10px" }}
+          style={{ marginRight: '10px' }}
         >
           <option value="geolonia/basic">Basic</option>
           <option value="geolonia/gsi">GSI</option>
@@ -346,7 +349,7 @@ const App: React.FC = () => {
         <select
           onChange={onMapLanguageChange}
           defaultValue={defaultLanguageFromHash}
-          style={{ marginRight: "10px" }}
+          style={{ marginRight: '10px' }}
         >
           <option value="auto">Auto / 自動判定</option>
           <option value="ja">日本語</option>
@@ -372,6 +375,6 @@ const App: React.FC = () => {
       </Portal>
     </>
   );
-}
+};
 
 export default App;
