@@ -190,8 +190,11 @@ const App: React.FC = () => {
     }
     updateHash(hash);
     const newStyleUrl = styleIdToUrl(style, language);
-    if (defaultStyleUrl !== newStyleUrl) {
-      mapRef.current?.setStyle( newStyleUrl );
+
+    const map = mapRef.current;
+    if (map && map.isStyleLoaded()) {
+      // Bad things will happen when we call setStyle while another style is being loaded.
+      map.setStyle( newStyleUrl );
     }
   }, [ style, language, zLatLngString, defaultStyleUrl ]);
 
