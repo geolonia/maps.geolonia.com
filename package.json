@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@geolonia/embed-react": "^0.0.6",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -10,6 +11,7 @@
     "@types/node": "^12.0.0",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
+    "geojson": "^0.5.0",
     "react": "^17.0.2",
     "react-div-100vh": "^0.6.0",
     "react-dom": "^17.0.2",
@@ -21,7 +23,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint --ext .tsx --ext .ts --ext .jsx --ext .js src"
   },
   "eslintConfig": {
     "extends": [
@@ -42,7 +45,8 @@
     ]
   },
   "devDependencies": {
-    "@geolonia/embed": "^1.17.1",
-    "@types/mapbox-gl": "^1.13.0"
+    "@geolonia/eslint-config": "^0.0.1",
+    "@types/geojson": "^7946.0.8",
+    "maplibre-gl": "^1.15.2"
   }
 }

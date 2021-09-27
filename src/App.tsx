@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LngLatBounds, Map, IControl } from "mapbox-gl";
-import GeoloniaMap from "./GeoloniaMap";
-import ReactDOM from "react-dom";
-import { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
-import Div100vh from 'react-div-100vh'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { LngLatBounds, Map, IControl } from 'maplibre-gl';
+import { GeoloniaMap } from '@geolonia/embed-react';
+import ReactDOM from 'react-dom';
+import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
+import Div100vh from 'react-div-100vh';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
@@ -18,7 +18,7 @@ class PortalControl implements IControl {
   _container: HTMLDivElement;
 
   constructor(container: HTMLDivElement) {
-    this._container = container
+    this._container = container;
   }
 
   onAdd(map: Map) {
@@ -36,10 +36,10 @@ const parseHash = () => {
   const qstr = window.location.hash.substr(1);
   const q = new URLSearchParams(qstr);
   return q;
-}
+};
 
 const updateHash = (q: URLSearchParams) => {
-  window.location.hash = '#' + q.toString().replace(/%2F/g, '/');
+  window.location.hash = `#${q.toString().replace(/%2F/g, '/')}`;
 };
 
 const styleIdToUrl = (style: string, lang?: string) => {
@@ -75,16 +75,29 @@ const getCurrentSavedState = () => {
     if ('localStorage' in window && (rawState = localStorage.getItem('geolstate')) && rawState) {
       state = {
         ...INITIAL_STATE,
-        ...JSON.parse(rawState)
+        ...JSON.parse(rawState),
       } as InitialSavedState;
     }
-  } catch {} finally {
-    return state;
+  } catch {
+    // no-op
   }
+  return state;
+};
+
+const getDefaultCameraOptions = (state: InitialSavedState) => {
+  const mapStr = parseHash().get('map') || `${state.z}/${state.lat}/${state.lng}`;
+  const [ zoom, lat, lng ] = mapStr.split('/');
+  return {
+    center: {
+      lat: parseFloat(lat),
+      lng: parseFloat(lng),
+    },
+    zoom: parseFloat(zoom),
+  };
 };
 
 const App: React.FC = () => {
-  const [ zLatLngString, setZLatLngString ] = useState<string>("");
+  const [ zLatLngString, setZLatLngString ] = useState<string>('');
   const mapRef = useRef<Map>();
 
   const savedState = useMemo(getCurrentSavedState, []);
@@ -95,7 +108,9 @@ const App: React.FC = () => {
     const rawState = JSON.stringify(newState);
     try {
       window.localStorage.setItem('geolstate', rawState);
-    } catch (e) {}
+    } catch {
+      // no-op
+    }
   }, []);
 
   const defaultStyleFromHash = useMemo(() => {
@@ -113,13 +128,13 @@ const App: React.FC = () => {
 
   const switcherControlDiv = useMemo(() => {
     const div = document.createElement('div');
-    div.className = 'mapboxgl-ctrl';
+    div.className = 'mapboxgl-ctrl maplibregl-ctrl';
     return div;
   }, []);
 
   const searchControlDiv = useMemo(() => {
     const div = document.createElement('div');
-    div.className = 'mapboxgl-ctrl';
+    div.className = 'mapboxgl-ctrl maplibregl-ctrl';
     return div;
   }, []);
 
@@ -130,6 +145,10 @@ const App: React.FC = () => {
 
     const searchControl = new PortalControl(searchControlDiv);
     map.addControl(searchControl, 'top-left');
+
+    const currentState = getCurrentSavedState();
+    const cameraOptions = getDefaultCameraOptions(currentState);
+    map.jumpTo(cameraOptions);
 
     map.on('moveend', () => {
       // see: https://github.com/maplibre/maplibre-gl-js/blob/ba7bfbc846910c5ae848aaeebe4bde6833fc9cdc/src/ui/hash.js#L59
@@ -143,7 +162,7 @@ const App: React.FC = () => {
         lat = Math.round(center.lat * m) / m,
         zStr = Math.ceil(zoom);
 
-      setZLatLngString(`#map=${zStr}/${lat}/${lng}`);
+      setZLatLngString(`${zStr}/${lat}/${lng}`);
       setSavedState({ z: rawZoom, lat, lng });
     });
   }, [searchControlDiv, setSavedState, switcherControlDiv]);
@@ -163,6 +182,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const hash = parseHash();
     hash.set('style', style);
+    if (zLatLngString) {
+      hash.set('map', zLatLngString);
+    }
     if (language && language !== 'auto') {
       hash.set('lang', language);
     } else {
@@ -170,10 +192,13 @@ const App: React.FC = () => {
     }
     updateHash(hash);
     const newStyleUrl = styleIdToUrl(style, language);
-    if (defaultStyleUrl !== newStyleUrl) {
-      mapRef.current?.setStyle( newStyleUrl );
+
+    const map = mapRef.current;
+    if (map && map.isStyleLoaded()) {
+      // Bad things will happen when we call setStyle while another style is being loaded.
+      map.setStyle( newStyleUrl );
     }
-  }, [ style, language, defaultStyleUrl ]);
+  }, [ style, language, zLatLngString, defaultStyleUrl ]);
 
   const handleSearch = useCallback<React.FormEventHandler<HTMLFormElement>>(async (ev) => {
     ev.preventDefault();
@@ -192,15 +217,16 @@ const App: React.FC = () => {
     const resp = await fetch(
       `https://api.maps.geolonia.com/v1/search?${qsa.toString()}`, {
         method: 'get',
-      }
-    )
+      },
+    );
     const body = await resp.json();
     if (body.error === true) {
+      // eslint-disable-next-line no-console
       console.error(body);
       return;
     }
 
-    const data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>
+    const data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>;
 
     const source = map.getSource('search-results');
     if (source) {
@@ -273,7 +299,7 @@ const App: React.FC = () => {
 
     let bounds: LngLatBounds | undefined;
     for (const f of data.features) {
-      if (f.geometry.type !== "Point") continue;
+      if (f.geometry.type !== 'Point') continue;
       if (typeof bounds === 'undefined') {
         //@ts-ignore
         bounds = new geolonia.LngLatBounds(f.geometry.coordinates, f.geometry.coordinates);
@@ -290,19 +316,16 @@ const App: React.FC = () => {
     <>
       <Div100vh>
         <GeoloniaMap
-          style={{ width: "100vw", height: "100%"}}
-          options={{
-            "data-zoom": savedState.z,
-            "data-lng": savedState.lng,
-            "data-lat": savedState.lat,
-            "data-fullscreen-control": "on",
-            "data-geolocate-control": "on",
-            "data-gesture-handling": "off",
-            "data-marker": "off",
-            "data-3d": "on",
-            "data-scale-control": "bottom-right",
-            "data-style": defaultStyleUrl,
-          }}
+          style={{ width: '100vw', height: '100%' }}
+          initOptions={{ hash: 'map' }}
+          embedSrc="https://cdn.geolonia.com/dev/embed?geolonia-api-key=YOUR-API-KEY"
+          fullscreenControl="on"
+          geolocateControl="on"
+          gestureHandling="off"
+          marker="off"
+          render3d="on"
+          scaleControl="bottom-right"
+          mapStyle={defaultStyleUrl}
           onLoad={onLoad}
         />
       </Div100vh>
@@ -310,7 +333,7 @@ const App: React.FC = () => {
         <select
           onChange={onMapStyleChange}
           defaultValue={defaultStyleFromHash}
-          style={{ marginRight: "10px" }}
+          style={{ marginRight: '10px' }}
         >
           <option value="geolonia/basic">Basic</option>
           <option value="geolonia/gsi">GSI</option>
@@ -319,18 +342,21 @@ const App: React.FC = () => {
           <option value="geolonia/notebook">Notebook</option>
           <option value="geolonia/red-planet">Red Planet</option>
           <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
+          <optgroup label="EXPERIMENTAL | 実験的">
+            <option value="https://raw.githubusercontent.com/geolonia/basic-gsiseamlessphoto/main/style.json">Basic &amp; GSI Seamless Photo</option>
+          </optgroup>
         </select>
         <select
           onChange={onMapLanguageChange}
           defaultValue={defaultLanguageFromHash}
-          style={{ marginRight: "10px" }}
+          style={{ marginRight: '10px' }}
         >
           <option value="auto">Auto / 自動判定</option>
           <option value="ja">日本語</option>
           <option value="en">English</option>
         </select>
         <a
-          href={`https://openstreetmap.org/${zLatLngString}`}
+          href={`https://openstreetmap.org/#map=${zLatLngString}`}
           target="_blank"
           rel="noopener noreferrer"
           className="ext openstreetmap-link"
@@ -349,6 +375,6 @@ const App: React.FC = () => {
       </Portal>
     </>
   );
-}
+};
 
 export default App;
