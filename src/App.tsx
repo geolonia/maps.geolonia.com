@@ -125,6 +125,7 @@ const App: React.FC = () => {
 
   const [ style, setStyle ] = useState<string>(defaultStyleFromHash);
   const [ language, setLanguage ] = useState<string>(defaultLanguageFromHash);
+  const currentStyleRef = useRef<string>(defaultStyleUrl);
 
   const switcherControlDiv = useMemo(() => {
     const div = document.createElement('div');
@@ -194,9 +195,10 @@ const App: React.FC = () => {
     const newStyleUrl = styleIdToUrl(style, language);
 
     const map = mapRef.current;
-    if (map && map.isStyleLoaded()) {
+    if (map && map.isStyleLoaded() && currentStyleRef.current !== newStyleUrl) {
       // Bad things will happen when we call setStyle while another style is being loaded.
       map.setStyle( newStyleUrl );
+      currentStyleRef.current = newStyleUrl;
     }
   }, [ style, language, zLatLngString, defaultStyleUrl ]);
 
