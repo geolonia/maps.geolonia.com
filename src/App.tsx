@@ -47,7 +47,7 @@ const styleIdToUrl = (style: string, lang?: string) => {
     return style;
   }
   if (lang && lang !== 'auto') {
-    return `https://cdn.geolonia.com/style/${style}/${lang}.json`;
+    return `https://cdn.geoloniamaps.com/style/${style}/${lang}.json`;
   }
   return style.split(';')[0];
 };
@@ -320,7 +320,7 @@ const App: React.FC = () => {
         <GeoloniaMap
           style={{ width: '100vw', height: '100%' }}
           initOptions={{ hash: 'map' }}
-          embedSrc="https://cdn.geolonia.com/dev/embed?geolonia-api-key=YOUR-API-KEY"
+          embedSrc="https://cdn.geoloniamaps.com/dev/embed?geolonia-api-key=YOUR-API-KEY"
           fullscreenControl="on"
           geolocateControl="on"
           gestureHandling="off"
