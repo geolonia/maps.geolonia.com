@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { LngLatBounds, Map, IControl } from 'maplibre-gl';
+import type { LngLatBounds, Map } from 'maplibre-gl';
 import { GeoloniaMap } from '@geolonia/embed-react';
-import ReactDOM from 'react-dom';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 
@@ -9,37 +8,23 @@ interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
 }
 
-const Portal: React.FC<{container: HTMLDivElement}> = ({children, container}) => {
-  return ReactDOM.createPortal(children, container);
-};
-
-class PortalControl implements IControl {
-  _map: Map | undefined;
-  _container: HTMLDivElement;
-
-  constructor(container: HTMLDivElement) {
-    this._container = container;
-  }
-
-  onAdd(map: Map) {
-    this._map = map;
-    return this._container;
-  }
-
-  onRemove() {
-    this._container.parentNode?.removeChild(this._container);
-    this._map = undefined;
-  }
-}
-
-const parseHash = () => {
-  const qstr = window.location.hash.substr(1);
+const parseHash = (url?: Location | URL) => {
+  const qstr = (url || window.location).hash.substring(1);
   const q = new URLSearchParams(qstr);
   return q;
 };
 
 const updateHash = (q: URLSearchParams) => {
   window.location.hash = `#${q.toString().replace(/%2F/g, '/')}`;
+};
+
+const parseTilesetOverrideHash = () => {
+  const overrideStr = parseHash().get('tilesetOverride');
+  return (overrideStr || '').split(';').reduce<{[key: string]: string}>((map, current) => {
+    const [styleId, newId] = current.split(':', 2);
+    map[styleId] = newId;
+    return map;
+  }, {});
 };
 
 const styleIdToUrl = (style: string, lang?: string) => {
@@ -127,25 +112,9 @@ const App: React.FC = () => {
   const [ language, setLanguage ] = useState<string>(defaultLanguageFromHash);
   const currentStyleRef = useRef<string>(defaultStyleUrl);
 
-  const switcherControlDiv = useMemo(() => {
-    const div = document.createElement('div');
-    div.className = 'mapboxgl-ctrl maplibregl-ctrl';
-    return div;
-  }, []);
-
-  const searchControlDiv = useMemo(() => {
-    const div = document.createElement('div');
-    div.className = 'mapboxgl-ctrl maplibregl-ctrl';
-    return div;
-  }, []);
-
   const onLoad = useCallback((map: Map) => {
     mapRef.current = map;
-    const switcherControl = new PortalControl(switcherControlDiv);
-    map.addControl(switcherControl, 'top-left');
-
-    const searchControl = new PortalControl(searchControlDiv);
-    map.addControl(searchControl, 'top-left');
+    (window as any)._mainMap = map;
 
     const currentState = getCurrentSavedState();
     const cameraOptions = getDefaultCameraOptions(currentState);
@@ -166,7 +135,26 @@ const App: React.FC = () => {
       setZLatLngString(`${zStr}/${lat}/${lng}`);
       setSavedState({ z: rawZoom, lat, lng });
     });
-  }, [searchControlDiv, setSavedState, switcherControlDiv]);
+
+    // https://github.com/geolonia/embed/issues/270
+    // Geolonia の Embed API の transformRequest 関数は geolonia のソースには適用されない。
+    // そのため、先に Embed API の transformRequest を走らせて、その後、更に変形する
+    const origTransformRequest: maplibregl.TransformRequestFunction = (map as any)._requestManager._transformRequestFn;
+    const newTransformRequest: maplibregl.TransformRequestFunction = (url, resourceType) => {
+      const treq = origTransformRequest(url, resourceType);
+      if (treq) {
+        const replaceMap = parseTilesetOverrideHash();
+        treq.url = treq.url.replace(
+          /^(https:\/\/tileserver(?:-[^.]+)?\.geolonia\.com\/)([^/]+)\//,
+          (_match, g1, g2) => {
+            return `${g1}${replaceMap[g2] || g2}/`;
+          },
+        );
+      }
+      return treq || { url };
+    };
+    (map as any)._requestManager._transformRequestFn = newTransformRequest;
+  }, [setSavedState]);
 
   const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
     const val = ev.target.value;
@@ -329,52 +317,53 @@ const App: React.FC = () => {
           scaleControl="bottom-right"
           mapStyle={defaultStyleUrl}
           onLoad={onLoad}
-        />
+        >
+          <GeoloniaMap.Control position='top-left' containerProps={{ className: 'mapboxgl-ctrl maplibregl-ctrl' }}>
+            <select
+              onChange={onMapStyleChange}
+              defaultValue={defaultStyleFromHash}
+              style={{ marginRight: '10px' }}
+            >
+              <option value="geolonia/basic">Basic</option>
+              <option value="geolonia/gsi">GSI</option>
+              <option value="geolonia/homework">Homework</option>
+              <option value="geolonia/midnight">Midnight</option>
+              <option value="geolonia/notebook">Notebook</option>
+              <option value="geolonia/red-planet">Red Planet</option>
+              <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
+              <optgroup label="EXPERIMENTAL | 実験的">
+                <option value="https://raw.githubusercontent.com/geolonia/basic-gsiseamlessphoto/main/style.json">Basic &amp; GSI Seamless Photo</option>
+              </optgroup>
+            </select>
+            <select
+              onChange={onMapLanguageChange}
+              defaultValue={defaultLanguageFromHash}
+              style={{ marginRight: '10px' }}
+            >
+              <option value="auto">Auto / 自動判定</option>
+              <option value="ja">日本語</option>
+              <option value="en">English</option>
+            </select>
+            <a
+              href={`https://openstreetmap.org/#map=${zLatLngString}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ext openstreetmap-link"
+            >
+              OpenStreetMap で開く
+            </a>
+          </GeoloniaMap.Control>
+          <GeoloniaMap.Control position='top-left' containerProps={{ className: 'mapboxgl-ctrl maplibregl-ctrl' }}>
+            <form id="searchControl" onSubmit={handleSearch}>
+              <input
+                type="search"
+                placeholder="検索..."
+                name="q"
+              />
+            </form>
+          </GeoloniaMap.Control>
+        </GeoloniaMap>
       </Div100vh>
-      <Portal container={switcherControlDiv}>
-        <select
-          onChange={onMapStyleChange}
-          defaultValue={defaultStyleFromHash}
-          style={{ marginRight: '10px' }}
-        >
-          <option value="geolonia/basic">Basic</option>
-          <option value="geolonia/gsi">GSI</option>
-          <option value="geolonia/homework">Homework</option>
-          <option value="geolonia/midnight">Midnight</option>
-          <option value="geolonia/notebook">Notebook</option>
-          <option value="geolonia/red-planet">Red Planet</option>
-          <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
-          <optgroup label="EXPERIMENTAL | 実験的">
-            <option value="https://raw.githubusercontent.com/geolonia/basic-gsiseamlessphoto/main/style.json">Basic &amp; GSI Seamless Photo</option>
-          </optgroup>
-        </select>
-        <select
-          onChange={onMapLanguageChange}
-          defaultValue={defaultLanguageFromHash}
-          style={{ marginRight: '10px' }}
-        >
-          <option value="auto">Auto / 自動判定</option>
-          <option value="ja">日本語</option>
-          <option value="en">English</option>
-        </select>
-        <a
-          href={`https://openstreetmap.org/#map=${zLatLngString}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ext openstreetmap-link"
-        >
-          OpenStreetMap で開く
-        </a>
-      </Portal>
-      <Portal container={searchControlDiv}>
-        <form id="searchControl" onSubmit={handleSearch}>
-          <input
-            type="search"
-            placeholder="検索..."
-            name="q"
-          />
-        </form>
-      </Portal>
     </>
   );
 };
