@@ -8,14 +8,23 @@ interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
 }
 
-const parseHash = () => {
-  const qstr = window.location.hash.substr(1);
+const parseHash = (url?: Location | URL) => {
+  const qstr = (url || window.location).hash.substring(1);
   const q = new URLSearchParams(qstr);
   return q;
 };
 
 const updateHash = (q: URLSearchParams) => {
   window.location.hash = `#${q.toString().replace(/%2F/g, '/')}`;
+};
+
+const parseTilesetOverrideHash = () => {
+  const overrideStr = parseHash().get('tilesetOverride');
+  return (overrideStr || '').split(';').reduce<{[key: string]: string}>((map, current) => {
+    const [styleId, newId] = current.split(':', 2);
+    map[styleId] = newId;
+    return map;
+  }, {});
 };
 
 const styleIdToUrl = (style: string, lang?: string) => {
@@ -105,6 +114,7 @@ const App: React.FC = () => {
 
   const onLoad = useCallback((map: Map) => {
     mapRef.current = map;
+    (window as any)._mainMap = map;
 
     const currentState = getCurrentSavedState();
     const cameraOptions = getDefaultCameraOptions(currentState);
@@ -125,6 +135,25 @@ const App: React.FC = () => {
       setZLatLngString(`${zStr}/${lat}/${lng}`);
       setSavedState({ z: rawZoom, lat, lng });
     });
+
+    // https://github.com/geolonia/embed/issues/270
+    // Geolonia の Embed API の transformRequest 関数は geolonia のソースには適用されない。
+    // そのため、先に Embed API の transformRequest を走らせて、その後、更に変形する
+    const origTransformRequest: maplibregl.TransformRequestFunction = (map as any)._requestManager._transformRequestFn;
+    const newTransformRequest: maplibregl.TransformRequestFunction = (url, resourceType) => {
+      const treq = origTransformRequest(url, resourceType);
+      if (treq) {
+        const replaceMap = parseTilesetOverrideHash();
+        treq.url = treq.url.replace(
+          /^(https:\/\/tileserver(?:-[^.]+)?\.geolonia\.com\/)([^/]+)\//,
+          (_match, g1, g2) => {
+            return `${g1}${replaceMap[g2] || g2}/`;
+          },
+        );
+      }
+      return treq || { url };
+    };
+    (map as any)._requestManager._transformRequestFn = newTransformRequest;
   }, [setSavedState]);
 
   const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
