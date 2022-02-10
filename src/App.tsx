@@ -32,7 +32,7 @@ const styleIdToUrl = (style: string, lang?: string) => {
     return style;
   }
   if (lang && lang !== 'auto') {
-    return `https://cdn.geoloniamaps.com/style/${style}/${lang}.json`;
+    return `https://cdn.geolonia.com/style/${style}/${lang}.json`;
   }
   return style.split(';')[0];
 };
