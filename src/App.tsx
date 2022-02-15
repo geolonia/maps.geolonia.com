@@ -324,13 +324,18 @@ const App: React.FC = () => {
               defaultValue={defaultStyleFromHash}
               style={{ marginRight: '10px' }}
             >
-              <option value="geolonia/basic">Basic</option>
-              <option value="geolonia/gsi">GSI</option>
-              <option value="geolonia/homework">Homework</option>
-              <option value="geolonia/midnight">Midnight</option>
-              <option value="geolonia/notebook">Notebook</option>
-              <option value="geolonia/red-planet">Red Planet</option>
-              <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
+              <optgroup label="標準スタイル">
+                <option value="geolonia/basic">Basic</option>
+                <option value="geolonia/gsi">GSI</option>
+                <option value="geolonia/homework">Homework</option>
+                <option value="geolonia/midnight">Midnight</option>
+                <option value="geolonia/notebook">Notebook</option>
+                <option value="geolonia/red-planet">Red Planet</option>
+              </optgroup>
+              <optgroup label="その他">
+                <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
+                <option value="https://geolonia.github.io/openstreetmap-carto/style.json">OSM Carto</option>
+              </optgroup>
               <optgroup label="EXPERIMENTAL | 実験的">
                 <option value="https://raw.githubusercontent.com/geolonia/basic-gsiseamlessphoto/main/style.json">Basic &amp; GSI Seamless Photo</option>
               </optgroup>
