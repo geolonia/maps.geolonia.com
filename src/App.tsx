@@ -302,13 +302,24 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const stage = useMemo(() => (
+    window.localStorage.getItem('_geoloniaStageOverride') || 'v1'
+  ), []);
+
+  const handleStageChange = useCallback<React.MouseEventHandler<HTMLButtonElement>>((ev) => {
+    ev.preventDefault();
+    const newStage = stage === 'dev' ? 'v1' : 'dev';
+    window.localStorage.setItem('_geoloniaStageOverride', newStage);
+    document.location.reload();
+  }, [stage]);
+
   return (
     <>
       <Div100vh>
         <GeoloniaMap
           style={{ width: '100vw', height: '100%' }}
           initOptions={{ hash: 'map' }}
-          embedSrc="https://cdn.geolonia.com/v1/embed?geolonia-api-key=YOUR-API-KEY"
+          embedSrc={`https://cdn.geolonia.com/${stage}/embed?geolonia-api-key=YOUR-API-KEY`}
           fullscreenControl="on"
           geolocateControl="on"
           gestureHandling="off"
@@ -355,9 +366,17 @@ const App: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="ext openstreetmap-link"
+              style={{ marginRight: '10px' }}
             >
               OpenStreetMap で開く
             </a>
+            <button
+              style={{}}
+              type="button"
+              onClick={handleStageChange}
+            >
+              {stage}
+            </button>
           </GeoloniaMap.Control>
           <GeoloniaMap.Control position='top-left' containerProps={{ className: 'mapboxgl-ctrl maplibregl-ctrl' }}>
             <form id="searchControl" onSubmit={handleSearch}>
