@@ -139,8 +139,8 @@ const App: React.FC = () => {
     // https://github.com/geolonia/embed/issues/270
     // Geolonia の Embed API の transformRequest 関数は geolonia のソースには適用されない。
     // そのため、先に Embed API の transformRequest を走らせて、その後、更に変形する
-    const origTransformRequest: maplibregl.TransformRequestFunction = (map as any)._requestManager._transformRequestFn;
-    const newTransformRequest: maplibregl.TransformRequestFunction = (url, resourceType) => {
+    const origTransformRequest: maplibregl.RequestTransformFunction = (map as any)._requestManager._transformRequestFn;
+    const newTransformRequest: maplibregl.RequestTransformFunction = (url, resourceType) => {
       const treq = origTransformRequest(url, resourceType);
       if (treq) {
         const replaceMap = parseTilesetOverrideHash();
@@ -221,7 +221,8 @@ const App: React.FC = () => {
     const source = map.getSource('search-results');
     if (source) {
       if (source.type !== 'geojson') return;
-      source.setData(data);
+      const geoJsonSource = source as maplibregl.GeoJSONSource;
+      geoJsonSource.setData(data);
     } else {
       map.addSource('search-results', {
         type: 'geojson',
@@ -318,7 +319,7 @@ const App: React.FC = () => {
       <Div100vh>
         <GeoloniaMap
           style={{ width: '100vw', height: '100%' }}
-          initOptions={{ hash: 'map' }}
+          initOptions={{ hash: 'map', style }}
           embedSrc={`https://cdn.geolonia.com/${stage}/embed?geolonia-api-key=YOUR-API-KEY`}
           fullscreenControl="on"
           geolocateControl="on"
