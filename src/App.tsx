@@ -304,13 +304,16 @@ const App: React.FC = () => {
   }, []);
 
   const stage = useMemo(() => (
-    window.localStorage.getItem('_geoloniaStageOverride') || 'v1'
+    parseHash().get('stage') || window.localStorage.getItem('_geoloniaStageOverride') || 'v1'
   ), []);
 
   const handleStageChange = useCallback<React.MouseEventHandler<HTMLButtonElement>>((ev) => {
     ev.preventDefault();
     const newStage = stage === 'dev' ? 'v1' : 'dev';
     window.localStorage.setItem('_geoloniaStageOverride', newStage);
+    const hashParams = parseHash();
+    hashParams.set('stage', newStage);
+    updateHash(hashParams);
     document.location.reload();
   }, [stage]);
 
