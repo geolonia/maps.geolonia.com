@@ -106,11 +106,9 @@ const App: React.FC = () => {
     return parseHash().get('lang') || savedState.lang;
   }, [savedState.lang]);
 
-  const defaultStyleUrl = styleIdToUrl(defaultStyleFromHash, defaultLanguageFromHash);
-
   const [ style, setStyle ] = useState<string>(defaultStyleFromHash);
   const [ language, setLanguage ] = useState<string>(defaultLanguageFromHash);
-  const currentStyleRef = useRef<string>(defaultStyleUrl);
+  const currentStyleUrl = styleIdToUrl(style, language);
 
   const onLoad = useCallback((map: Map) => {
     mapRef.current = map;
@@ -179,16 +177,9 @@ const App: React.FC = () => {
     } else {
       hash.delete('lang');
     }
-    updateHash(hash);
-    const newStyleUrl = styleIdToUrl(style, language);
 
-    const map = mapRef.current;
-    if (map && map.isStyleLoaded() && currentStyleRef.current !== newStyleUrl) {
-      // Bad things will happen when we call setStyle while another style is being loaded.
-      map.setStyle( newStyleUrl );
-      currentStyleRef.current = newStyleUrl;
-    }
-  }, [ style, language, zLatLngString, defaultStyleUrl ]);
+    updateHash(hash);
+  }, [ style, language, zLatLngString ]);
 
   const handleSearch = useCallback<React.FormEventHandler<HTMLFormElement>>(async (ev) => {
     ev.preventDefault();
@@ -330,7 +321,7 @@ const App: React.FC = () => {
           marker="off"
           render3d="on"
           scaleControl="bottom-right"
-          mapStyle={defaultStyleUrl}
+          mapStyle={currentStyleUrl}
           onLoad={onLoad}
         >
           <GeoloniaMap.Control position='top-left' containerProps={{ className: 'mapboxgl-ctrl maplibregl-ctrl' }}>
