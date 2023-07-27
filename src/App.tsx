@@ -363,7 +363,7 @@ const App: React.FC = () => {
               className="ext openstreetmap-link"
               style={{ marginRight: '10px' }}
             >
-              OpenStreetMap で開く
+              OpenStreetMap で開く！
             </a>
             <button
               style={{}}
