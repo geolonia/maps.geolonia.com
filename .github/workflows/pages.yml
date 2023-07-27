@@ -6,12 +6,17 @@ on:
       - gh-pages
   pull_request:
     branches:
-      - gh-pages
+      - main
+    types:
+      - opened
+      - reopened
 
   workflow_dispatch:
 
+concurrency: preview-${{ github.ref }}
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,39 +38,18 @@ jobs:
         with:
           folder: build
 
-
-  deploy:
-    if: github.ref == 'refs/heads/dev'
-
-    # Allow one concurrent deployment
-    concurrency:
-      group: "dev-deploy"
-      cancel-in-progress: true
-
-    needs:
-      - build
-
-    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
-    permissions:
-      contents: read
-      id-token: write
-
-    runs-on: ubuntu-latest
-
+  deploy-preview:
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/download-artifact@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install and Build
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy preview
+        uses: rossjrw/pr-preview-action@v1
         with:
-          name: build
-          path: build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: "build"
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2
+          source-dir: ./build/
