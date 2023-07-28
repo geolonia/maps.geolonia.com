@@ -27,10 +27,9 @@ jobs:
 
       - name: Install and Build
         run: |
-          npm install --save --legacy-peer-deps
-          npm ci
-          npm run lint
-          npm run build
+          yarn install --frozen-lockfile
+          yarn run lint
+          yarn run build
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
@@ -45,8 +44,8 @@ jobs:
 
       - name: Install and Build
         run: |
-          npm install --save --legacy-peer-deps
-          npm run build
+          yarn install --frozen-lockfile
+          yarn run build
 
       - name: Deploy preview
         uses: rossjrw/pr-preview-action@v1
