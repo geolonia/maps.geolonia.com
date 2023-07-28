@@ -29,7 +29,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16
-        run: |
+      - run: |
           yarn install --frozen-lockfile
           yarn run lint
           yarn run build
