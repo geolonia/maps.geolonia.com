@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build and Deploy preview
 
 on:
   push:
@@ -26,25 +26,13 @@ jobs:
           fetch-depth: 0
 
       - name: Install and Build
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: "npm"
         run: |
           yarn install --frozen-lockfile
           yarn run lint
-          yarn run build
-
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build
-
-  deploy-preview:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install and Build
-        run: |
-          yarn install --frozen-lockfile
           yarn run build
 
       - name: Deploy preview
