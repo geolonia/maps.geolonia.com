@@ -27,7 +27,7 @@ jobs:
 
       - name: Install and Build
         run: |
-          npm install
+          npm install --save --legacy-peer-deps
           npm ci
           npm run lint
           npm run build
@@ -45,7 +45,7 @@ jobs:
 
       - name: Install and Build
         run: |
-          npm install
+          npm install --save --legacy-peer-deps
           npm run build
 
       - name: Deploy preview
