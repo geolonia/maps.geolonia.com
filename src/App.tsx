@@ -363,7 +363,7 @@ const App: React.FC = () => {
               className="ext openstreetmap-link"
               style={{ marginRight: '10px' }}
             >
-              OpenStreetMap で開く
+              OpenStreetMap で開く（修正後！）
             </a>
             <button
               style={{}}
@@ -377,7 +377,7 @@ const App: React.FC = () => {
             <form id="searchControl" onSubmit={handleSearch}>
               <input
                 type="search"
-                placeholder="検索...（テスト修正）"
+                placeholder="検索..."
                 name="q"
               />
             </form>
