@@ -10,7 +10,7 @@ on:
 jobs:
   build:
 
-    concurrency: ci-${{ github.ref }}
+    # concurrency: ci-${{ github.ref }}
 
     # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
     permissions:
