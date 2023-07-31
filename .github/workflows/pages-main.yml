@@ -35,6 +35,8 @@ jobs:
       group: "pages"
       cancel-in-progress: true
 
+    needs: build
+
     permissions:
       contents: read
       pages: write
