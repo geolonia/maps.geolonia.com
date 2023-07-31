@@ -48,5 +48,6 @@
     "@geolonia/eslint-config": "^0.0.1",
     "@types/geojson": "^7946.0.10",
     "maplibre-gl": "^2.4.0"
-  }
+  },
+  "homepage": "./"
 }
