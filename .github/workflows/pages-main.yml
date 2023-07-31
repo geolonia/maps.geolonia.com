@@ -10,7 +10,7 @@ on:
 concurrency: preview-${{ github.ref }}
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +29,42 @@ jobs:
           yarn run build
 
       - name: Deploy
+
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # - uses: actions/download-artifact@v3
+      #   with:
+      #     name: build
+      #     path: build
+
+      # - name: Setup Pages
+      #   uses: actions/configure-pages@v3
+
+      # - name: Upload artifact
+      #   uses: actions/upload-pages-artifact@v1
+      #   with:
+      #     path: "build"
+
+      - name: Deploy to Github Pages
+        id: deployment
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build
