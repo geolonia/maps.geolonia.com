@@ -28,9 +28,6 @@ jobs:
           yarn run lint
           yarn run build
 
-      - name: Deploy
-
-
   deploy:
     if: github.ref == 'refs/heads/main'
 
