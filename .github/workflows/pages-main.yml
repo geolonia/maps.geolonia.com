@@ -11,6 +11,21 @@ concurrency: preview-${{ github.ref }}
 
 jobs:
   build:
+
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
+
+    # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     runs-on: ubuntu-latest
 
     steps:
@@ -28,42 +43,7 @@ jobs:
           yarn run lint
           yarn run build
 
-  deploy:
-    if: github.ref == 'refs/heads/main'
-
-    concurrency:
-      group: "pages"
-      cancel-in-progress: true
-
-    needs: build
-
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-
-    steps:
-      # - uses: actions/download-artifact@v3
-      #   with:
-      #     name: build
-      #     path: build
-
-      # - name: Setup Pages
-      #   uses: actions/configure-pages@v3
-
-      # - name: Upload artifact
-      #   uses: actions/upload-pages-artifact@v1
-      #   with:
-      #     path: "build"
-
-      - name: Deploy to Github Pages
-        id: deployment
+      - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build
