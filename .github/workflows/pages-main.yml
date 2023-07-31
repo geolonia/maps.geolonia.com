@@ -10,12 +10,10 @@ on:
 jobs:
   build:
 
-    # if: github.ref == 'refs/heads/main'
-    # concurrency: ci-${{ github.ref }}
-
     # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
     permissions:
       contents: read
+      pull-requests: write
       pages: write
       id-token: write
 
