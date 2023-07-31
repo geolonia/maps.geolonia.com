@@ -7,8 +7,6 @@ on:
 
   workflow_dispatch:
 
-concurrency: preview-${{ github.ref }}
-
 jobs:
   build:
 
@@ -21,10 +19,6 @@ jobs:
       contents: read
       pages: write
       id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     runs-on: ubuntu-latest
 
@@ -47,3 +41,4 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build
+          branch: ph-pages
