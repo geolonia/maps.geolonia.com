@@ -3,6 +3,7 @@ import type { LngLatBounds, Map } from 'maplibre-gl';
 import { GeoloniaMap } from '@geolonia/embed-react';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
+import { normalize } from '@geolonia/normalize-any-latlng';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
@@ -191,23 +192,47 @@ const App: React.FC = () => {
     if (!map) {
       return;
     }
-    const qsa = new URLSearchParams();
-    qsa.set('q', query);
-    const {lng, lat} = map.getCenter();
-    qsa.set('pos', `${lng},${lat}`);
-    const resp = await fetch(
-      `https://api.maps.geolonia.com/v1/search?${qsa.toString()}`, {
-        method: 'get',
-      },
-    );
-    const body = await resp.json();
-    if (body.error === true) {
-      // eslint-disable-next-line no-console
-      console.error(body);
-      return;
-    }
 
-    const data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>;
+    let data: FeatureCollection<Geometry, GeoJsonProperties>;
+    const queriesInCoord = normalize(query).filter((coord) => coord.lat !== null && coord.lng !== null);
+
+    if (queriesInCoord.length > 0) {
+      data = {
+        type: 'FeatureCollection',
+        features: queriesInCoord.map((coord) => {
+          const { lat, lng } = coord as { lat: number, lng: number };
+          const lat_prefix = lat >= 0 ? '北緯' : '南緯';
+          const lng_prefix = lng >= 0 ? '東経' : '西経';
+          const index = `${lat_prefix}${Math.round(Math.abs(lat) * 10000) / 10000}°, ${lng_prefix}${Math.round(Math.abs(lng) * 10000) / 10000}°`;
+          return {
+            type: 'Feature',
+            properties: { index },
+            geometry: {
+              type: 'Point',
+              coordinates: [lng, lat],
+            },
+          };
+        }),
+      };
+    } else {
+      const qsa = new URLSearchParams();
+      qsa.set('q', query);
+      const {lng, lat} = map.getCenter();
+      qsa.set('pos', `${lng},${lat}`);
+      const resp = await fetch(
+        `https://api.maps.geolonia.com/v1/search?${qsa.toString()}`, {
+          method: 'get',
+        },
+      );
+      const body = await resp.json();
+      if (body.error === true) {
+        // eslint-disable-next-line no-console
+        console.error(body);
+        return;
+      }
+
+      data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>;
+    }
 
     const source = map.getSource('search-results');
     if (source) {
