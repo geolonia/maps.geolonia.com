@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@geolonia/embed-react": "^1.2.2",
-    "@geolonia/normalize-any-latlng": "^0.0.2",
+    "@geolonia/normalize-any-latlng": "^0.0.3",
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.4.3",
