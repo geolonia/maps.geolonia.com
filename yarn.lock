@@ -1143,10 +1143,10 @@
     eslint-plugin-react "^7.25.1"
     typescript "^4.4.2"
 
-"@geolonia/normalize-any-latlng@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@geolonia/normalize-any-latlng/-/normalize-any-latlng-0.0.2.tgz#a086711840bf9757f23960b23119dcccf0f05a06"
-  integrity sha512-+MwlLE3IC2s707Jb+1xYS4oAB1Z+Ot7vmdo4Qxeu9hPZRq2yTdQYnw/oDUyB4cIVaphUlMZU42aw0UOpp3xrvw==
+"@geolonia/normalize-any-latlng@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@geolonia/normalize-any-latlng/-/normalize-any-latlng-0.0.3.tgz#1fa74db9a9ef028816848995f0774ea01554722f"
+  integrity sha512-RTVOXNeVEbgca5dPEj25QsAw2iCZ2U2F8AJ/TmBSek4DUHYKGRhYEBJTdGDiwd55H/P+1EIaO1zvP/kQJ0KeKA==
 
 "@humanwhocodes/config-array@^0.9.2":
   version "0.9.3"
