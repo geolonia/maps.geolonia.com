@@ -364,6 +364,9 @@ const App: React.FC = () => {
                 <option value="geolonia/notebook">Notebook</option>
                 <option value="geolonia/red-planet">Red Planet</option>
               </optgroup>
+              <optgroup label="SmartCity用スタイル">
+                <option value="geoloniamaps/smartcity-base">SmartCity Base</option>
+              </optgroup>
               <optgroup label="その他">
                 <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
                 <option value="https://geolonia.github.io/openstreetmap-carto/style.json">OSM Carto</option>
