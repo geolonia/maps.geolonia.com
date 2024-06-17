@@ -135,6 +135,26 @@ const App: React.FC = () => {
       setSavedState({ z: rawZoom, lat, lng });
     });
 
+    map.on('styledata', () => {
+      // style has changed, see if there's any metadata we need to read
+      const styleMetadata: {
+        'geolonia:maxzoom'?: number
+        'geolonia:minzoom'?: number
+      } = map.getStyle().metadata || {};
+      const maxzoom = styleMetadata['geolonia:maxzoom'];
+      if (maxzoom) {
+        map.setMaxZoom(maxzoom);
+      } else {
+        map.setMaxZoom();
+      }
+      const minzoom = styleMetadata['geolonia:minzoom'];
+      if (minzoom) {
+        map.setMinZoom(minzoom);
+      } else {
+        map.setMinZoom();
+      }
+    });
+
     // https://github.com/geolonia/embed/issues/270
     // Geolonia の Embed API の transformRequest 関数は geolonia のソースには適用されない。
     // そのため、先に Embed API の transformRequest を走らせて、その後、更に変形する
