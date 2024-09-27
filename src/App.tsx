@@ -425,7 +425,7 @@ const App: React.FC = () => {
             <form id="searchControl" onSubmit={handleSearch}>
               <input
                 type="search"
-                placeholder="検索..."
+                placeholder="検索...（テスト!!!）"
                 name="q"
               />
             </form>
