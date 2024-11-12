@@ -49,22 +49,59 @@ const addFeatureInfoHandler = (map: maplibregl.Map) => {
         const name = tags.name || tags['name:ja'] || tags['name:en'] || tags['name:zh'];
         const wikidata = tags['brand:wikidata'];
         const source_ref = tags['source_ref'];
+        const website = tags['website'];
         // ポップアップを作成
         const popupContent = Object.entries(tags)
-          .map(([key, value]) => {
-            const translatedKey = tagTranslations[key] || key;
-            return `<div><strong>${translatedKey}:</strong> ${value}</div>`;
-          })
-          .join('');
+        .map(([key, value]) => {
+          const translatedKey = tagTranslations[key] || key;
+          return `<div><strong>${translatedKey}:</strong> ${value}</div>`;
+        })
+        .join('');
+        
         new maplibregl.Popup()
           .setLngLat([lng, lat])
           .setHTML(`
-            <div style="max-height: 300px; overflow-y: auto;">
-              <h3 style="margin-bottom: 8px; font-weight: bold;">${name || ''}</h3>
-              ${popupContent || 'この地点には情報がありません'}
-              ${wikidata ? `<div><a href="https://www.wikidata.org/wiki/${wikidata}" target="_blank">Wikidata</a>を見に行く</div>` : ''}
-              ${name ? `<div><a href="https://ja.wikipedia.org/wiki/${name}" target="_blank">Wikipedia</a>を見に行く</div>` : ''}
-              ${source_ref ? `<div><a href="${source_ref}" target="_blank">参照先</a>を見に行く</div>` : ''}
+            <div>
+              <h3>
+                ${name || 'No Title'}
+              </h3>
+              <div>
+                ${popupContent || 'この地点には情報がありません'}
+              </div>
+              ${wikidata ? `
+                <div>
+                  <a href="https://www.wikidata.org/wiki/${wikidata}" target="_blank" style="
+                    color: #1a73e8; 
+                    text-decoration: none;
+                  ">
+                    Wikidataを見に行く
+                  </a>
+                </div>
+              ` : ''}
+              ${name ? `
+                <div>
+                  <a href="https://ja.wikipedia.org/wiki/${name}" target="_blank" style="
+                    color: #1a73e8; 
+                    text-decoration: none;
+                  ">
+                    Wikipediaを見に行く
+                  </a>
+                </div>
+              ` : ''}
+              ${source_ref ? `
+                <div>
+                  <a href="${source_ref}" target="_blank">
+                    参照先を見に行く
+                  </a>
+                </div>
+              ` : ''}
+              ${website ? `
+                <div>
+                  <a href="${website}" target="_blank">
+                    ウェブサイトを見に行く
+                  </a>
+                </div>
+              ` : ''}
             </div>
           `)
           .addTo(map);
