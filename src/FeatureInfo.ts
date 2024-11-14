@@ -17,13 +17,13 @@ const tagTranslations: { [key: string]: string } = {
   'name:en': '名称(英語)',
   'name:ja': '名称(日本語)',
   'opening_hours': '営業時間',
-  'shop': '店舗種別'
+  'shop': '店舗種別',
 };
 
 const addFeatureInfoHandler = (map: maplibregl.Map) => {
   map.on('click', async (e) => {
     const { lat, lng } = e.lngLat;
-    
+
     try {
       const query = `
         [out:json];
@@ -34,12 +34,12 @@ const addFeatureInfoHandler = (map: maplibregl.Map) => {
         )->.all;
         .all out body 1;
       `;
-      
+
       const response = await fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
         body: query,
       });
-      
+
       const data = await response.json();
       if (data.elements && data.elements.length > 0) {
         const feature = data.elements[0];
@@ -52,12 +52,12 @@ const addFeatureInfoHandler = (map: maplibregl.Map) => {
         const website = tags['website'];
         // ポップアップを作成
         const popupContent = Object.entries(tags)
-        .map(([key, value]) => {
-          const translatedKey = tagTranslations[key] || key;
-          return `<div><strong>${translatedKey}:</strong> ${value}</div>`;
-        })
-        .join('');
-        
+          .map(([key, value]) => {
+            const translatedKey = tagTranslations[key] || key;
+            return `<div><strong>${translatedKey}:</strong> ${value}</div>`;
+          })
+          .join('');
+
         new maplibregl.Popup()
           .setLngLat([lng, lat])
           .setHTML(`
