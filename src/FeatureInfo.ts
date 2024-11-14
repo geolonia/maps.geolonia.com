@@ -107,7 +107,7 @@ const addFeatureInfoHandler = (map: maplibregl.Map) => {
           .addTo(map);
       }
     } catch (error) {
-      console.error('Error fetching feature info:', error);
+      //console.error('Error fetching feature info:', error);
     }
   });
 };
