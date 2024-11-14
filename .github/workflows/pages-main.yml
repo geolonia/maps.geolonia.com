@@ -32,7 +32,7 @@ jobs:
       - name: Install and Build
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 20
       - run: |
           yarn install --frozen-lockfile
           yarn run lint
