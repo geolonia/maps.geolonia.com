@@ -50,7 +50,7 @@ const INITIAL_STATE: InitialSavedState = {
   z: 6,
   lng: 136.944,
   lat: 35.645,
-  style: 'geolonia/basic',
+  style: 'geolonia/basic-v2',
   lang: 'auto',
 };
 
