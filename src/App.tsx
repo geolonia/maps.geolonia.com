@@ -50,7 +50,7 @@ const INITIAL_STATE: InitialSavedState = {
   z: 6,
   lng: 136.944,
   lat: 35.645,
-  style: 'geolonia/basic',
+  style: 'geolonia/basic-v2',
   lang: 'auto',
 };
 
@@ -376,6 +376,7 @@ const App: React.FC = () => {
               style={{ marginRight: '10px' }}
             >
               <optgroup label="標準スタイル">
+                <option value="geolonia/basic-v2">Basic v2</option>
                 <option value="geolonia/basic-v1">Basic v1</option>
                 <option value="geolonia/basic">Basic (Legacy)</option>
                 <option value="geolonia/gsi">GSI</option>
