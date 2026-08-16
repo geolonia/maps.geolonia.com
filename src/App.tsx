@@ -377,8 +377,6 @@ const App: React.FC = () => {
             >
               <optgroup label="標準スタイル">
                 <option value="geolonia/basic-v2">Basic v2</option>
-                <option value="geolonia/basic-v1">Basic v1</option>
-                <option value="geolonia/basic">Basic (Legacy)</option>
                 <option value="geolonia/gsi">GSI</option>
                 <option value="geolonia/homework">Homework</option>
                 <option value="geolonia/midnight">Midnight</option>
