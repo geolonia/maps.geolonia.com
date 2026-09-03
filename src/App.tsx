@@ -4,6 +4,7 @@ import { GeoloniaMap } from '@geolonia/embed-react';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
+import addFeatureInfoHandler from './FeatureInfo';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
@@ -114,6 +115,8 @@ const App: React.FC = () => {
   const onLoad = useCallback((map: Map) => {
     mapRef.current = map;
     (window as any)._mainMap = map;
+
+    addFeatureInfoHandler(map);
 
     const currentState = getCurrentSavedState();
     const cameraOptions = getDefaultCameraOptions(currentState);
