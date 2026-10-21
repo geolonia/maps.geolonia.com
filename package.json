@@ -19,10 +19,12 @@
     "start": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint --max-warnings 0 --ext .tsx --ext .ts --ext .jsx --ext .js src",
-    "test": "vitest run"
+    "lint": "eslint --max-warnings 0 --ext .tsx --ext .ts --ext .jsx --ext .js src e2e",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/geojson": "^7946.0.10",
     "@typescript-eslint/eslint-plugin": "^8.72.0",
     "@typescript-eslint/parser": "^8.72.0",
