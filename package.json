@@ -19,7 +19,7 @@
     "start": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint --ext .tsx --ext .ts --ext .jsx --ext .js src"
+    "lint": "eslint --max-warnings 0 --ext .tsx --ext .ts --ext .jsx --ext .js src"
   },
   "devDependencies": {
     "@geolonia/eslint-config": "^0.0.1",
