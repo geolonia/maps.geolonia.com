@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './hash';
 
-afterEach(() => {
+beforeEach(() => {
   window.location.hash = '';
 });
 

@@ -17,6 +17,16 @@ describe('overrideTilesetUrl', () => {
     expect(overrideTilesetUrl(url, { gsi: 'gsi-next' })).toBe(url);
   });
 
+  it('uses the matching entry when the map has several tileset IDs', () => {
+    expect(overrideTilesetUrl('https://tileserver.geolonia.com/osm/tiles.json', { gsi: 'gsi-next', osm: 'osm-dev' }))
+      .toBe('https://tileserver.geolonia.com/osm-dev/tiles.json');
+  });
+
+  it('leaves the URL unchanged when the tileset ID has no trailing slash', () => {
+    const url = 'https://tileserver.geolonia.com/gsi';
+    expect(overrideTilesetUrl(url, { gsi: 'gsi-next' })).toBe(url);
+  });
+
   it('leaves URLs on other hosts unchanged', () => {
     const url = 'https://osm.v2.tiles.geolonia.com/gsi/tiles.json';
     expect(overrideTilesetUrl(url, { gsi: 'gsi-next' })).toBe(url);

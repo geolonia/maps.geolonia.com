@@ -6,7 +6,7 @@ import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './lib/hash';
 import { styleIdToUrl } from './lib/style';
-import { getCurrentSavedState, getDefaultCameraOptions, InitialSavedState } from './lib/saved-state';
+import { getCurrentSavedState, getDefaultCameraOptions, type InitialSavedState } from './lib/saved-state';
 import { formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
 import { coordinatesToFeatureCollection } from './lib/coordinates';
@@ -53,9 +53,10 @@ const App: React.FC = () => {
     map.jumpTo(cameraOptions);
 
     map.on('moveend', () => {
-      const { zLatLng, lat, lng } = formatPosition(map.getCenter(), map.getZoom());
+      const rawZoom = map.getZoom();
+      const { zLatLng, lat, lng } = formatPosition(map.getCenter(), rawZoom);
       setZLatLngString(zLatLng);
-      setSavedState({ z: map.getZoom(), lat, lng });
+      setSavedState({ z: rawZoom, lat, lng });
     });
 
     map.on('styledata', () => {
