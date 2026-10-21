@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { LngLatBounds, Map } from 'maplibre-gl';
-import { GeoloniaMap } from '@geolonia/embed-react';
+import { LngLatBounds, type GeoJSONSource, type Map as MaplibreMap, type RequestTransformFunction } from 'maplibre-gl';
+import { Control, Map } from '@geolonia/maps-react';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
@@ -10,6 +10,7 @@ import { getCurrentSavedState, getDefaultCameraOptions, type InitialSavedState }
 import { formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
 import { coordinatesToFeatureCollection } from './lib/coordinates';
+import { nextStage, resolveStage } from './lib/stage';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
@@ -17,9 +18,15 @@ interface SearchFormControlsCollection extends HTMLFormControlsCollection {
 
 const App: React.FC = () => {
   const [ zLatLngString, setZLatLngString ] = useState<string>('');
-  const mapRef = useRef<Map>();
+  const mapRef = useRef<MaplibreMap>();
 
   const savedState = useMemo(getCurrentSavedState, []);
+
+  // MapLibre の hash は地図を作った時点でハッシュを書き換えるので、初期位置は地図を作る前に決める
+  const initialCamera = useMemo(() => {
+    const { center, zoom } = getDefaultCameraOptions(savedState);
+    return { center: [center.lng, center.lat] as [number, number], zoom };
+  }, [savedState]);
 
   const setSavedState = useCallback((input: Partial<InitialSavedState>) => {
     const currentState = getCurrentSavedState();
@@ -44,13 +51,9 @@ const App: React.FC = () => {
   const [ language, setLanguage ] = useState<string>(defaultLanguageFromHash);
   const currentStyleUrl = styleIdToUrl(style, language);
 
-  const onLoad = useCallback((map: Map) => {
+  const onLoad = useCallback((map: MaplibreMap) => {
     mapRef.current = map;
     (window as any)._mainMap = map;
-
-    const currentState = getCurrentSavedState();
-    const cameraOptions = getDefaultCameraOptions(currentState);
-    map.jumpTo(cameraOptions);
 
     map.on('moveend', () => {
       const rawZoom = map.getZoom();
@@ -78,21 +81,13 @@ const App: React.FC = () => {
         map.setMinZoom();
       }
     });
-
-    // https://github.com/geolonia/embed/issues/270
-    // Geolonia の Embed API の transformRequest 関数は geolonia のソースには適用されない。
-    // そのため、先に Embed API の transformRequest を走らせて、その後、更に変形する
-    const origTransformRequest: maplibregl.RequestTransformFunction = (map as any)._requestManager._transformRequestFn;
-    const newTransformRequest: maplibregl.RequestTransformFunction = (url, resourceType) => {
-      const treq = origTransformRequest(url, resourceType);
-      if (treq) {
-        const replaceMap = parseTilesetOverrideHash();
-        treq.url = overrideTilesetUrl(treq.url, replaceMap);
-      }
-      return treq || { url };
-    };
-    (map as any)._requestManager._transformRequestFn = newTransformRequest;
   }, [setSavedState]);
+
+  // maps-core が API キーなどを付けた後の URL が渡される
+  const transformRequest = useCallback<RequestTransformFunction>((url) => {
+    const replaceMap = parseTilesetOverrideHash();
+    return { url: overrideTilesetUrl(url, replaceMap) };
+  }, []);
 
   const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
     const val = ev.target.value;
@@ -160,7 +155,7 @@ const App: React.FC = () => {
     const source = map.getSource('search-results');
     if (source) {
       if (source.type !== 'geojson') return;
-      const geoJsonSource = source as maplibregl.GeoJSONSource;
+      const geoJsonSource = source as GeoJSONSource;
       geoJsonSource.setData(data);
     } else {
       map.addSource('search-results', {
@@ -231,8 +226,7 @@ const App: React.FC = () => {
     for (const f of data.features) {
       if (f.geometry.type !== 'Point') continue;
       if (typeof bounds === 'undefined') {
-        //@ts-ignore
-        bounds = new geolonia.LngLatBounds(f.geometry.coordinates, f.geometry.coordinates);
+        bounds = new LngLatBounds(f.geometry.coordinates as [number, number], f.geometry.coordinates as [number, number]);
       } else {
         bounds.extend(f.geometry.coordinates as [number, number]);
       }
@@ -242,14 +236,24 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const stage = useMemo(() => (
-    parseHash().get('stage') || window.localStorage.getItem('_geoloniaStageOverride') || 'v1'
-  ), []);
+  const stage = useMemo(() => {
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem('_geoloniaStageOverride');
+    } catch {
+      // no-op
+    }
+    return resolveStage(parseHash().get('stage'), stored);
+  }, []);
 
   const handleStageChange = useCallback<React.MouseEventHandler<HTMLButtonElement>>((ev) => {
     ev.preventDefault();
-    const newStage = stage === 'dev' ? 'v1' : 'dev';
-    window.localStorage.setItem('_geoloniaStageOverride', newStage);
+    const newStage = nextStage(stage);
+    try {
+      window.localStorage.setItem('_geoloniaStageOverride', newStage);
+    } catch {
+      // no-op
+    }
     const hashParams = parseHash();
     hashParams.set('stage', newStage);
     updateHash(hashParams);
@@ -259,20 +263,25 @@ const App: React.FC = () => {
   return (
     <>
       <Div100vh>
-        <GeoloniaMap
-          style={{ width: '100vw', height: '100%' }}
-          initOptions={{ hash: 'map', style }}
-          embedSrc={`https://cdn.geolonia.com/${stage}/embed?geolonia-api-key=YOUR-API-KEY`}
-          fullscreenControl="on"
-          geolocateControl="on"
-          gestureHandling="off"
-          marker="off"
-          render3d="on"
+        <Map
+          containerStyle={{ width: '100vw', height: '100%' }}
+          apiKey="YOUR-API-KEY"
+          stage={stage}
+          hash="map"
+          center={initialCamera.center}
+          zoom={initialCamera.zoom}
+          transitionType="jump"
+          style={currentStyleUrl}
+          transformRequest={transformRequest}
+          fullscreenControl
+          geolocateControl
+          gestureHandling={false}
+          marker={false}
+          {...{ '3d': true }}
           scaleControl="bottom-right"
-          mapStyle={currentStyleUrl}
           onLoad={onLoad}
         >
-          <GeoloniaMap.Control position='top-left' containerProps={{ className: 'mapboxgl-ctrl maplibregl-ctrl' }}>
+          <Control position="top-left">
             <select
               onChange={onMapStyleChange}
               defaultValue={defaultStyleFromHash}
@@ -322,8 +331,8 @@ const App: React.FC = () => {
             >
               {stage}
             </button>
-          </GeoloniaMap.Control>
-          <GeoloniaMap.Control position='top-left' containerProps={{ className: 'mapboxgl-ctrl maplibregl-ctrl' }}>
+          </Control>
+          <Control position="top-left">
             <form id="searchControl" onSubmit={handleSearch}>
               <input
                 type="search"
@@ -331,8 +340,8 @@ const App: React.FC = () => {
                 name="q"
               />
             </form>
-          </GeoloniaMap.Control>
-        </GeoloniaMap>
+          </Control>
+        </Map>
       </Div100vh>
     </>
   );

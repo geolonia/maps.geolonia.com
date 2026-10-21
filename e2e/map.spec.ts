@@ -130,3 +130,20 @@ test('replaces the tileset ID given in tilesetOverride', async ({ page }) => {
 
   expect(new URL((await tilesetRequest).url()).pathname).toBe('/e2e-replaced/tiles.json');
 });
+
+test('switches the API stage with the stage button', async ({ page }) => {
+  // dev 環境の状態に左右されないよう、dev の API には実際には問い合わせない
+  await page.route('https://api.geolonia.com/dev/**', (route) => route.abort());
+
+  await page.goto('/#map=14/35.6812/139.7671&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const stageButton = page.getByRole('button', { name: 'v1' });
+  await expect(stageButton).toBeVisible();
+
+  const devRequest = page.waitForRequest((req) => req.url().startsWith('https://api.geolonia.com/dev/'));
+  await stageButton.click();
+
+  expect(new URL((await devRequest).url()).pathname).toMatch(/^\/dev\//);
+  await expect(page.getByRole('button', { name: 'dev' })).toBeVisible();
+  await expect.poll(async () => (await getHashParams(page)).get('stage')).toBe('dev');
+});
