@@ -22,13 +22,14 @@
     "lint": "eslint --max-warnings 0 --ext .tsx --ext .ts --ext .jsx --ext .js src"
   },
   "devDependencies": {
-    "@geolonia/eslint-config": "^0.0.1",
     "@types/geojson": "^7946.0.10",
     "@typescript-eslint/eslint-plugin": "^8.72.0",
     "@typescript-eslint/parser": "^8.72.0",
     "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^8.57.1",
     "eslint-plugin-editorconfig": "^4.0.3",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "maplibre-gl": "^2.4.0",
     "vite": "^8.3.4"
