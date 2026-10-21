@@ -18,10 +18,14 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx"
   },
   "include": [
     "src",
-    "vite.config.ts"
+    "e2e",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
   ]
 }

@@ -70,6 +70,12 @@ module.exports = {
       },
     },
     {
+      files: ['e2e/**/*.ts'],
+      rules: {
+        'import/no-extraneous-dependencies': 'off',
+      },
+    },
+    {
       files: ['**/*.{test,spec}.{js,jsx,ts,tsx}'],
       rules: {
         'no-import-assign': 'off',
