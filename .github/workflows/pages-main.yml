@@ -7,15 +7,14 @@ on:
 
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   build:
 
-    # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+    # gh-pages ブランチへの push だけに使う
     permissions:
       contents: write
-      pull-requests: write
-      pages: write
-      id-token: write
 
     environment:
       name: github-pages
@@ -25,12 +24,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          # デプロイのアクションは token を自分で受け取るので、.git/config に残さない
+          persist-credentials: false
 
       - name: Install and Build
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - run: |
@@ -40,7 +41,7 @@ jobs:
           yarn run build
 
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
         with:
           folder: build
           clean-exclude: pr-preview/

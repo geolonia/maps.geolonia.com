@@ -1,0 +1,30 @@
+# Dependabot config for the Geolonia GitHub Actions pinning standard.
+#
+# Dependabot keeps SHA pins current: it bumps both the commit SHA and the
+# trailing version comment, so SHA-pinning never goes stale. The 8-day cooldown
+# is one day longer than the `.pinact.yml` min_age of 7 (Dependabot counts whole
+# calendar days while pinact enforces an exact 168h floor), so a Dependabot PR
+# always clears the Action Pinning Check on arrival.
+#
+# Add more ecosystems (npm, pip, docker, ...) under `updates:` as the repo grows.
+# Adoption (Backstage scaffolder or manual copy) and how to merge into an
+# existing dependabot.yml are documented in docs/github-actions-pinning.md.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 8
+    groups:
+      # Batch minor and patch bumps into a single weekly PR. Majors are
+      # excluded here, so breaking upgrades arrive as individual PRs that get
+      # isolated review. Security updates also stay individual (groups defaults
+      # to applies-to: version-updates).
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
