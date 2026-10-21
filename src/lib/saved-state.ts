@@ -32,14 +32,22 @@ export const getCurrentSavedState = () => {
   return state;
 };
 
-export const getDefaultCameraOptions = (state: InitialSavedState) => {
-  const mapStr = parseHash().get('map') || `${state.z}/${state.lat}/${state.lng}`;
-  const [ zoom, lat, lng ] = mapStr.split('/');
-  return {
-    center: {
-      lat: parseFloat(lat),
-      lng: parseFloat(lng),
-    },
-    zoom: parseFloat(zoom),
-  };
+type CameraOptions = {
+  center: { lat: number, lng: number }
+  zoom: number
+};
+
+const parsePosition = (zoom: number, lat: number, lng: number): CameraOptions | undefined => {
+  if (![zoom, lat, lng].every(Number.isFinite) || lat < -90 || lat > 90) {
+    return undefined;
+  }
+  return { center: { lat, lng }, zoom };
+};
+
+// ハッシュの位置、保存済みの位置、初期位置の順に、使える値を探す
+export const getDefaultCameraOptions = (state: InitialSavedState): CameraOptions => {
+  const [ zoom, lat, lng ] = (parseHash().get('map') || '').split('/').map(parseFloat);
+  return parsePosition(zoom, lat, lng)
+    || parsePosition(state.z, state.lat, state.lng)
+    || parsePosition(INITIAL_STATE.z, INITIAL_STATE.lat, INITIAL_STATE.lng)!;
 };
