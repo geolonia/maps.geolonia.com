@@ -277,6 +277,7 @@ const App: React.FC = () => {
           geolocateControl
           gestureHandling={false}
           marker={false}
+          // '3d' は数字で始まり JSX の属性名に書けないので、spread で渡す
           {...{ '3d': true }}
           scaleControl="bottom-right"
           onLoad={onLoad}

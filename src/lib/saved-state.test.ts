@@ -52,12 +52,23 @@ describe('getDefaultCameraOptions', () => {
     });
   });
 
-  it('returns NaN values when the map position in the hash is malformed', () => {
+  it('falls back to the given state when the map position in the hash is malformed', () => {
+    const state = { ...INITIAL_STATE, z: 8.5, lat: 34.6937, lng: 135.5023 };
+    for (const hash of ['#map=abc', '#map=14', '#map=14/95/139.7671', '#map=x/35.6812/139.7671']) {
+      window.location.hash = hash;
+      expect(getDefaultCameraOptions(state)).toEqual({
+        center: { lat: 34.6937, lng: 135.5023 },
+        zoom: 8.5,
+      });
+    }
+  });
+
+  it('falls back to the initial position when the saved position is malformed too', () => {
     window.location.hash = '#map=abc';
-    const options = getDefaultCameraOptions(INITIAL_STATE);
-    expect(options.zoom).toBeNaN();
-    expect(options.center.lat).toBeNaN();
-    expect(options.center.lng).toBeNaN();
+    expect(getDefaultCameraOptions({ ...INITIAL_STATE, z: Number.NaN, lat: 35, lng: 135 })).toEqual({
+      center: { lat: INITIAL_STATE.lat, lng: INITIAL_STATE.lng },
+      zoom: INITIAL_STATE.z,
+    });
   });
 
   it('uses the given state when the hash has no map position', () => {
