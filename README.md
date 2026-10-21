@@ -1,6 +1,5 @@
 # [maps.geolonia.com](https://maps.geolonia.com)
 
-
 ## 開発
 
 Node.js 22 と Yarn 1 を使います。
