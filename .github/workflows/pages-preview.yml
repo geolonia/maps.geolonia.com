@@ -39,6 +39,7 @@ jobs:
       - run: |
           yarn install --frozen-lockfile
           yarn run lint
+          yarn run test
           yarn run build
 
       - name: Deploy preview

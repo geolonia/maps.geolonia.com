@@ -4,83 +4,16 @@ import { GeoloniaMap } from '@geolonia/embed-react';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
+import { parseHash, parseTilesetOverrideHash, updateHash } from './lib/hash';
+import { styleIdToUrl } from './lib/style';
+import { getCurrentSavedState, getDefaultCameraOptions, InitialSavedState } from './lib/saved-state';
+import { formatPosition } from './lib/position';
+import { overrideTilesetUrl } from './lib/tileset-override';
+import { coordinatesToFeatureCollection } from './lib/coordinates';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
 }
-
-const parseHash = (url?: Location | URL) => {
-  const qstr = (url || window.location).hash.substring(1);
-  const q = new URLSearchParams(qstr);
-  return q;
-};
-
-const updateHash = (q: URLSearchParams) => {
-  window.location.hash = `#${q.toString().replace(/%2F/g, '/')}`;
-};
-
-const parseTilesetOverrideHash = () => {
-  const overrideStr = parseHash().get('tilesetOverride');
-  return (overrideStr || '').split(';').reduce<{[key: string]: string}>((map, current) => {
-    const [styleId, newId] = current.split(':', 2);
-    map[styleId] = newId;
-    return map;
-  }, {});
-};
-
-const styleIdToUrl = (style: string, lang?: string) => {
-  if (style.startsWith('https://')) {
-    return style;
-  }
-  if (lang && lang !== 'auto') {
-    return `https://cdn.geolonia.com/style/${style}/${lang}.json`;
-  }
-  return style.split(';')[0];
-};
-
-interface InitialSavedState {
-  z: number
-  lat: number
-  lng: number
-  style: string
-  lang: string
-}
-
-const INITIAL_STATE: InitialSavedState = {
-  z: 6,
-  lng: 136.944,
-  lat: 35.645,
-  style: 'geolonia/basic-v2',
-  lang: 'auto',
-};
-
-const getCurrentSavedState = () => {
-  let state: InitialSavedState = INITIAL_STATE;
-  try {
-    let rawState: string | null;
-    if ('localStorage' in window && (rawState = localStorage.getItem('geolstate')) && rawState) {
-      state = {
-        ...INITIAL_STATE,
-        ...JSON.parse(rawState),
-      } as InitialSavedState;
-    }
-  } catch {
-    // no-op
-  }
-  return state;
-};
-
-const getDefaultCameraOptions = (state: InitialSavedState) => {
-  const mapStr = parseHash().get('map') || `${state.z}/${state.lat}/${state.lng}`;
-  const [ zoom, lat, lng ] = mapStr.split('/');
-  return {
-    center: {
-      lat: parseFloat(lat),
-      lng: parseFloat(lng),
-    },
-    zoom: parseFloat(zoom),
-  };
-};
 
 const App: React.FC = () => {
   const [ zLatLngString, setZLatLngString ] = useState<string>('');
@@ -120,19 +53,9 @@ const App: React.FC = () => {
     map.jumpTo(cameraOptions);
 
     map.on('moveend', () => {
-      // see: https://github.com/maplibre/maplibre-gl-js/blob/ba7bfbc846910c5ae848aaeebe4bde6833fc9cdc/src/ui/hash.js#L59
-      const center = map.getCenter(),
-        rawZoom = map.getZoom(),
-        zoom = Math.round(rawZoom * 100) / 100,
-        // derived from equation: 512px * 2^z / 360 / 10^d < 0.5px
-        precision = Math.ceil((zoom * Math.LN2 + Math.log(512 / 360 / 0.5)) / Math.LN10),
-        m = Math.pow(10, precision),
-        lng = Math.round(center.lng * m) / m,
-        lat = Math.round(center.lat * m) / m,
-        zStr = Math.ceil(zoom);
-
-      setZLatLngString(`${zStr}/${lat}/${lng}`);
-      setSavedState({ z: rawZoom, lat, lng });
+      const { zLatLng, lat, lng } = formatPosition(map.getCenter(), map.getZoom());
+      setZLatLngString(zLatLng);
+      setSavedState({ z: map.getZoom(), lat, lng });
     });
 
     map.on('styledata', () => {
@@ -163,12 +86,7 @@ const App: React.FC = () => {
       const treq = origTransformRequest(url, resourceType);
       if (treq) {
         const replaceMap = parseTilesetOverrideHash();
-        treq.url = treq.url.replace(
-          /^(https:\/\/tileserver(?:-[^.]+)?\.geolonia\.com\/)([^/]+)\//,
-          (_match, g1, g2) => {
-            return `${g1}${replaceMap[g2] || g2}/`;
-          },
-        );
+        treq.url = overrideTilesetUrl(treq.url, replaceMap);
       }
       return treq || { url };
     };
@@ -217,23 +135,7 @@ const App: React.FC = () => {
     const queriesInCoord = normalize(query).filter((coord) => coord.lat !== null && coord.lng !== null);
 
     if (queriesInCoord.length > 0) {
-      data = {
-        type: 'FeatureCollection',
-        features: queriesInCoord.map((coord) => {
-          const { lat, lng } = coord as { lat: number, lng: number };
-          const lat_prefix = lat >= 0 ? '北緯' : '南緯';
-          const lng_prefix = lng >= 0 ? '東経' : '西経';
-          const index = `${lat_prefix}${Math.round(Math.abs(lat) * 10000) / 10000}°, ${lng_prefix}${Math.round(Math.abs(lng) * 10000) / 10000}°`;
-          return {
-            type: 'Feature',
-            properties: { index },
-            geometry: {
-              type: 'Point',
-              coordinates: [lng, lat],
-            },
-          };
-        }),
-      };
+      data = coordinatesToFeatureCollection(queriesInCoord as { lat: number, lng: number }[]);
     } else {
       const qsa = new URLSearchParams();
       qsa.set('q', query);
