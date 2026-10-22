@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import stylistic from '@stylistic/eslint-plugin';
 import importX from 'eslint-plugin-import-x';
 import react from 'eslint-plugin-react';
@@ -7,7 +8,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import reactPkg from 'react/package.json' with { type: 'json' };
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: ['build/', 'node_modules/'],
   },
@@ -17,11 +18,11 @@ export default tseslint.config(
       js.configs.recommended,
       react.configs.flat.recommended,
       react.configs.flat['jsx-runtime'],
-      reactHooks.configs.flat['recommended-latest'],
     ],
     plugins: {
       '@stylistic': stylistic,
       'import-x': importX,
+      'react-hooks': reactHooks,
     },
     languageOptions: {
       parser: tseslint.parser,
@@ -36,11 +37,16 @@ export default tseslint.config(
       },
     },
     rules: {
+      // eslint-plugin-react-hooks v5 の recommended と同じ 2 ルールだけを有効にする
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+
       // .editorconfig の内容を、整形のルールとして強制する
       '@stylistic/indent': ['error', 2],
       '@stylistic/linebreak-style': ['error', 'unix'],
       '@stylistic/eol-last': 'error',
       '@stylistic/no-trailing-spaces': 'error',
+      'unicode-bom': ['error', 'never'],
 
       'array-callback-return': 'error',
       '@stylistic/arrow-parens': 'error',
@@ -57,7 +63,7 @@ export default tseslint.config(
       'no-useless-constructor': 'error',
       'no-useless-rename': 'error',
       'no-var': 'error',
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
       'prefer-arrow-callback': 'error',
       'prefer-const': 'error',
       'prefer-rest-params': 'error',
@@ -83,7 +89,7 @@ export default tseslint.config(
     rules: {
       'no-undef': 'off',
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
     },
   },
   {
