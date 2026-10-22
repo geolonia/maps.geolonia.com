@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LngLatBounds, type GeoJSONSource, type Map as MaplibreMap, type RequestTransformFunction } from 'maplibre-gl';
-import { Control, Map } from '@geolonia/maps-react';
+import { Control, FullscreenControl, GeolocateControl, Map, NavigationControl } from '@geolonia/maps-react';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
@@ -103,10 +103,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const hash = parseHash();
+    // map は MapLibre の hash が向きと傾きを含めて書くので、ここでは書かない
     hash.set('style', style);
-    if (zLatLngString) {
-      hash.set('map', zLatLngString);
-    }
     if (language && language !== 'auto') {
       hash.set('lang', language);
     } else {
@@ -114,7 +112,7 @@ const App: React.FC = () => {
     }
 
     updateHash(hash);
-  }, [ style, language, zLatLngString ]);
+  }, [ style, language ]);
 
   const handleSearch = useCallback<React.FormEventHandler<HTMLFormElement>>(async (ev) => {
     ev.preventDefault();
@@ -273,8 +271,8 @@ const App: React.FC = () => {
           transitionType="jump"
           style={currentStyleUrl}
           transformRequest={transformRequest}
-          fullscreenControl
-          geolocateControl
+          // maps-core の 🧭 は傾きを表示しないので、右上のコントロールは maps-react で同じ順に置く
+          navigationControl={false}
           gestureHandling={false}
           marker={false}
           // '3d' は数字で始まり JSX の属性名に書けないので、spread で渡す
@@ -282,6 +280,9 @@ const App: React.FC = () => {
           scaleControl="bottom-right"
           onLoad={onLoad}
         >
+          <FullscreenControl />
+          <NavigationControl visualizePitch />
+          <GeolocateControl />
           <Control position="top-left">
             <select
               onChange={onMapStyleChange}

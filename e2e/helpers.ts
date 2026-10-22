@@ -8,7 +8,9 @@ type MapLike = {
   getSource: (id: string) => unknown
   getLayer: (id: string) => unknown
   getStyle: () => { name?: string } | undefined
-  jumpTo: (options: { center: [number, number], zoom: number }) => void
+  jumpTo: (options: { center?: [number, number], zoom?: number, pitch?: number, bearing?: number }) => void
+  getPitch: () => number
+  getBearing: () => number
 };
 
 declare global {

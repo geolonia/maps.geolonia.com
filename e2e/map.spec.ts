@@ -147,3 +147,57 @@ test('switches the API stage with the stage button', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'dev' })).toBeVisible();
   await expect.poll(async () => (await getHashParams(page)).get('stage')).toBe('dev');
 });
+
+test('keeps the order of the controls in the top-right corner', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671&style=geolonia/basic-v2');
+  await waitForMap(page);
+
+  const classes = await page.locator('.maplibregl-ctrl-top-right button').evaluateAll(
+    (buttons) => buttons.map((button) => button.className.split(' ')[0]),
+  );
+  expect(classes).toEqual([
+    'maplibregl-ctrl-fullscreen',
+    'maplibregl-ctrl-zoom-in',
+    'maplibregl-ctrl-zoom-out',
+    'maplibregl-ctrl-compass',
+    'maplibregl-ctrl-geolocate',
+  ]);
+});
+
+test('tilts the compass with the camera and resets the pitch when clicked', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671&style=geolonia/basic-v2');
+  await waitForMap(page);
+
+  await page.evaluate(() => window._mainMap!.jumpTo({ pitch: 45, bearing: 30 }));
+  const icon = page.locator('.maplibregl-ctrl-compass .maplibregl-ctrl-icon');
+  await expect.poll(() => icon.evaluate((el) => (el as HTMLElement).style.transform)).toContain('rotateX(45deg)');
+
+  await page.locator('.maplibregl-ctrl-compass').click();
+  await expect.poll(() => page.evaluate(() => [window._mainMap!.getPitch(), window._mainMap!.getBearing()]))
+    .toEqual([0, 0]);
+});
+
+test('keeps the zoom, bearing and pitch after the camera stops', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671&style=geolonia/basic-v2');
+  await waitForMap(page);
+
+  await page.evaluate(() => window._mainMap!.jumpTo({ zoom: 14.3, pitch: 45, bearing: 30 }));
+  await expect.poll(async () => (await getHashParams(page)).get('map')).toMatch(/^14\.3\/[\d.]+\/[\d.]+\/30\/45$/);
+  // 書き換えたハッシュで地図が動かないことを、少し待ってから確かめる
+  await page.waitForTimeout(1_000);
+  const camera = await page.evaluate(() => {
+    const map = window._mainMap!;
+    return { zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+  });
+  expect(camera).toEqual({ zoom: 14.3, bearing: 30, pitch: 45 });
+});
+
+test('writes the camera into the URL hash when the page opens without one', async ({ page }) => {
+  await page.goto('/');
+  await waitForMap(page);
+
+  await expect.poll(async () => (await getHashParams(page)).get('map')).toMatch(/^[\d.]+\/[\d.-]+\/[\d.-]+/);
+  await styleSelect(page).selectOption('geolonia/gsi');
+  await expect.poll(async () => (await getHashParams(page)).get('style')).toBe('geolonia/gsi');
+  expect((await getHashParams(page)).get('map')).toMatch(/^[\d.]+\/[\d.-]+\/[\d.-]+/);
+});
