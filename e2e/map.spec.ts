@@ -191,3 +191,13 @@ test('keeps the zoom, bearing and pitch after the camera stops', async ({ page }
   });
   expect(camera).toEqual({ zoom: 14.3, bearing: 30, pitch: 45 });
 });
+
+test('writes the camera into the URL hash when the page opens without one', async ({ page }) => {
+  await page.goto('/');
+  await waitForMap(page);
+
+  await expect.poll(async () => (await getHashParams(page)).get('map')).toMatch(/^[\d.]+\/[\d.-]+\/[\d.-]+/);
+  await styleSelect(page).selectOption('geolonia/gsi');
+  await expect.poll(async () => (await getHashParams(page)).get('style')).toBe('geolonia/gsi');
+  expect((await getHashParams(page)).get('map')).toMatch(/^[\d.]+\/[\d.-]+\/[\d.-]+/);
+});
