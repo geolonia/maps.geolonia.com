@@ -6,7 +6,8 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 20_000 },
   retries: process.env.CI ? 1 : 0,
-  // テストはそれぞれ新しいブラウザで開き、互いに依存しないので、同じファイルの中でも並べて走らせる。public リポジトリの GitHub 標準ランナーは 4 コア
+  // テストはそれぞれ新しいブラウザで開き、互いに依存しないので、同じファイルの中でも並べて走らせる。
+  // 地図はソフトウェアの WebGL で描くので CPU を多く使う。4 コアのランナーでも 4 並列では描画が詰まって遅くなり、2 並列が最も速かった
   fullyParallel: true,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
