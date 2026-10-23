@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LngLatBounds, type GeoJSONSource, type Map as MaplibreMap, type RequestTransformFunction } from 'maplibre-gl';
-import { Control, FullscreenControl, GeolocateControl, Map, NavigationControl } from '@geolonia/maps-react';
+import { Control, FullscreenControl, GeolocateControl, Map, NavigationControl, useControl } from '@geolonia/maps-react';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
@@ -11,10 +11,19 @@ import { formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
 import { coordinatesToFeatureCollection } from './lib/coordinates';
 import { nextStage, resolveStage } from './lib/stage';
+import { CircleFlightControl } from './lib/circle-flight-control';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
 }
+
+const createCircleFlightControl = () => new CircleFlightControl();
+
+// useControl は地図の中でしか呼べないので、コントロールごとにコンポーネントにする
+const CircleFlightButton: React.FC = () => {
+  useControl(createCircleFlightControl, { position: 'top-right' });
+  return null;
+};
 
 const App: React.FC = () => {
   const [ zLatLngString, setZLatLngString ] = useState<string>('');
@@ -283,6 +292,7 @@ const App: React.FC = () => {
           <FullscreenControl />
           <NavigationControl visualizePitch />
           <GeolocateControl />
+          <CircleFlightButton />
           <Control position="top-left">
             <select
               onChange={onMapStyleChange}
