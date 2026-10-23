@@ -291,7 +291,8 @@ test.describe('with reduced motion', () => {
     await waitForMap(page);
 
     // 押したのは利用者なので、動きを減らす設定でも 1/4 周ずつ飛ばさずに回す。
-    // 経過時間に左右されないよう、描画のたびの向きの変化が小さいことを確かめる
+    // 経過時間に左右されないよう、描画のたびの向きの変化が 1/4 周（90 度）の半分より小さいことを確かめる。
+    // CI で並列に走らせると描画の間が 2 秒ほど空くことがあるので、それより細かくは見ない
     await page.evaluate(() => {
       const map = window._mainMap!;
       const steps: number[] = [];
@@ -306,7 +307,7 @@ test.describe('with reduced motion', () => {
     await page.locator('.maplibregl-ctrl-circle-flight').click();
     await expect(page.locator('.maplibregl-ctrl-circle-flight')).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => page.evaluate(() => window._bearingSteps!.length)).toBeGreaterThan(10);
-    expect(Math.max(...await page.evaluate(() => window._bearingSteps!))).toBeLessThan(10);
+    expect(Math.max(...await page.evaluate(() => window._bearingSteps!))).toBeLessThan(45);
     expect(errors).toEqual([]);
   });
 });

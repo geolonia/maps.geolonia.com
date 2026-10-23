@@ -8,7 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   // テストはそれぞれ新しいブラウザで開き、互いに依存しないので、同じファイルの中でも並べて走らせる。public リポジトリの GitHub 標準ランナーは 4 コア
   fullyParallel: true,
-  workers: process.env.CI ? 4 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: 'http://localhost:4173',
