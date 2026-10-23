@@ -57,7 +57,9 @@ export class CircleFlight {
 
   private rotate(pitch?: number) {
     this.targetBearing = this.map.getBearing() + STEP_DEGREES;
-    this.map.easeTo({ bearing: this.targetBearing, pitch, duration: STEP_DURATION, easing: linear });
+    // 動きを減らす OS の設定でも、押した人が望んだ動きなので essential にする。
+    // そうしないと duration が 0 になり、moveend から次の回転を呼び続けて止まらない
+    this.map.easeTo({ bearing: this.targetBearing, pitch, duration: STEP_DURATION, easing: linear, essential: true });
   }
 
   // 1/4 周を回り切る前に止まったときは、ほかの操作がカメラを動かしたので止める

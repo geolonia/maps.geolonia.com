@@ -46,6 +46,8 @@ describe('CircleFlight', () => {
     expect(options.duration).toBe(15_000);
     expect(options.easing!(0.25)).toBe(0.25);
     expect(options.pitch).toBeUndefined();
+    // 動きを減らす OS の設定では、essential でないと MapLibre が duration を 0 にする
+    expect(options.essential).toBe(true);
   });
 
   it('keeps rotating after each quarter turn, across the -180/180 boundary', () => {
