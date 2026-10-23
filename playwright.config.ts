@@ -6,7 +6,7 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 20_000 },
   retries: process.env.CI ? 1 : 0,
-  // テストは 1 ファイルにまとまっているので、ファイルの中のテストも並べて走らせる。GitHub の標準ランナーは 4 コア
+  // テストはそれぞれ新しいブラウザで開き、互いに依存しないので、同じファイルの中でも並べて走らせる。public リポジトリの GitHub 標準ランナーは 4 コア
   fullyParallel: true,
   workers: process.env.CI ? 4 : undefined,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',

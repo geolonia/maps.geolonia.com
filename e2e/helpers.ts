@@ -13,11 +13,14 @@ type MapLike = {
   getBearing: () => number
   isMoving: () => boolean
   getBounds: () => { contains: (lngLat: [number, number]) => boolean }
+  on: (type: string, listener: () => void) => void
 };
+
 
 declare global {
   interface Window {
     _mainMap?: MapLike
+    _bearingSteps?: number[]
   }
 }
 
@@ -38,3 +41,6 @@ export const getHashParams = async (page: Page) => {
 // 並び順に頼らず、持っている選択肢でセレクトボックスを特定する
 export const styleSelect = (page: Page) => page.locator('select', { has: page.locator('option[value="geolonia/gsi"]') });
 export const languageSelect = (page: Page) => page.locator('select', { has: page.locator('option[value="en"]') });
+
+// getBearing() は -180 から 180 の範囲に丸めて返すので、2 つの向きの差も同じ範囲で求める
+export const bearingDifference = (a: number, b: number) => ((a - b) % 360 + 540) % 360 - 180;

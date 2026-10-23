@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { getHashParams, languageSelect, styleSelect, waitForMap } from './helpers';
+import { bearingDifference, getHashParams, languageSelect, styleSelect, waitForMap } from './helpers';
 
 // 検索後の移動はアニメーションとタイルの読み込みを待つので、長めに待つ
 const SEARCH_MOVE_TIMEOUT = 40_000;
@@ -290,11 +290,23 @@ test.describe('with reduced motion', () => {
     await page.goto('/#map=14/35.6812/139.7671/0/60&style=geolonia/basic-v2');
     await waitForMap(page);
 
-    // 押したのは利用者なので、動きを減らす設定でも 1/4 周ずつ飛ばさずに回す
+    // 押したのは利用者なので、動きを減らす設定でも 1/4 周ずつ飛ばさずに回す。
+    // 経過時間に左右されないよう、描画のたびの向きの変化が小さいことを確かめる
+    await page.evaluate(() => {
+      const map = window._mainMap!;
+      const steps: number[] = [];
+      let last = map.getBearing();
+      map.on('move', () => {
+        const bearing = map.getBearing();
+        steps.push(Math.abs(((bearing - last) % 360 + 540) % 360 - 180));
+        last = bearing;
+      });
+      window._bearingSteps = steps;
+    });
     await page.locator('.maplibregl-ctrl-circle-flight').click();
     await expect(page.locator('.maplibregl-ctrl-circle-flight')).toHaveAttribute('aria-pressed', 'true');
-    const bearing = await page.evaluate(() => window._mainMap!.getBearing());
-    expect(bearing).toBeLessThan(45);
+    await expect.poll(() => page.evaluate(() => window._bearingSteps!.length)).toBeGreaterThan(10);
+    expect(Math.max(...await page.evaluate(() => window._bearingSteps!))).toBeLessThan(10);
     expect(errors).toEqual([]);
   });
 });
@@ -312,5 +324,6 @@ test('keeps flying and keeps the bearing when the style changes', async ({ page 
   await page.waitForTimeout(1_000);
 
   await expect(button).toHaveAttribute('aria-pressed', 'true');
-  expect(await page.evaluate(() => window._mainMap!.getBearing())).toBeGreaterThan(before);
+  // 待つ間に 180 度をまたいでも比べられるよう、差で確かめる
+  expect(bearingDifference(await page.evaluate(() => window._mainMap!.getBearing()), before)).toBeGreaterThan(0);
 });
