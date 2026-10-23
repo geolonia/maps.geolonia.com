@@ -73,7 +73,7 @@ test('moves to the coordinates typed in the search box', async ({ page }) => {
   await page.getByPlaceholder('検索...').press('Enter');
 
   await expect.poll(async () => (await getHashParams(page)).get('map'), { timeout: SEARCH_MOVE_TIMEOUT })
-    .toBe('22/34.6937/135.5023');
+    .toBe('17/34.6937/135.5023');
   const layers = await page.evaluate(() => ['search-results-circle', 'search-results-symbol', 'search-results-label']
     .map((id) => Boolean(window._mainMap!.getLayer(id))));
   expect(layers).toEqual([true, true, true]);
@@ -90,7 +90,36 @@ test('moves to the place returned by the search API', async ({ page }) => {
   const url = new URL((await searchRequest).url());
   expect(url.searchParams.get('q')).toBe('大阪市役所');
   await expect.poll(async () => (await getHashParams(page)).get('map'), { timeout: SEARCH_MOVE_TIMEOUT })
-    .toBe('22/34.6937/135.5023');
+    .toBe('17/34.6937/135.5023');
+});
+
+test('fits every result when the search API returns places far apart', async ({ page }) => {
+  // beforeEach の 1 件だけの結果より後に登録したルートが先に使われる
+  await page.route('https://api.maps.geolonia.com/v1/search?**', (route) => route.fulfill({
+    json: {
+      geojson: {
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', properties: { name: '東京駅' }, geometry: { type: 'Point', coordinates: [139.7671, 35.6812] } },
+          { type: 'Feature', properties: { name: '大阪駅' }, geometry: { type: 'Point', coordinates: [135.4959, 34.7024] } },
+        ],
+      },
+    },
+  }));
+  await page.goto('/#map=17/35.6812/139.7671&style=geolonia/basic-v2');
+  await waitForMap(page);
+
+  await page.getByPlaceholder('検索...').fill('駅');
+  await page.getByPlaceholder('検索...').press('Enter');
+
+  await expect.poll(async () => Number((await getHashParams(page)).get('map')?.split('/')[0]), { timeout: SEARCH_MOVE_TIMEOUT })
+    .toBeLessThan(10);
+  await page.waitForFunction(() => !window._mainMap!.isMoving());
+  const contains = await page.evaluate(() => {
+    const bounds = window._mainMap!.getBounds();
+    return [bounds.contains([139.7671, 35.6812]), bounds.contains([135.4959, 34.7024])];
+  });
+  expect(contains).toEqual([true, true]);
 });
 
 test('restores the last position from localStorage when the hash has none', async ({ page }) => {

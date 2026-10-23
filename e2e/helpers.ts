@@ -11,6 +11,8 @@ type MapLike = {
   jumpTo: (options: { center?: [number, number], zoom?: number, pitch?: number, bearing?: number }) => void
   getPitch: () => number
   getBearing: () => number
+  isMoving: () => boolean
+  getBounds: () => { contains: (lngLat: [number, number]) => boolean }
 };
 
 declare global {

@@ -239,7 +239,8 @@ const App: React.FC = () => {
       }
     }
     if (typeof bounds !== 'undefined') {
-      map.fitBounds(bounds, { padding: 200 });
+      // 結果が 1 件だと範囲の大きさが 0 になり、上限まで寄ってしまうので、街区が見える程度で止める
+      map.fitBounds(bounds, { padding: 200, maxZoom: 17 });
     }
   }, []);
 
