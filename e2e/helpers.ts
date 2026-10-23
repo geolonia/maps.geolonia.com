@@ -16,7 +16,6 @@ type MapLike = {
   on: (type: string, listener: () => void) => void
 };
 
-
 declare global {
   interface Window {
     _mainMap?: MapLike

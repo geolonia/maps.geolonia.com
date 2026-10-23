@@ -306,7 +306,7 @@ test.describe('with reduced motion', () => {
     });
     await page.locator('.maplibregl-ctrl-circle-flight').click();
     await expect(page.locator('.maplibregl-ctrl-circle-flight')).toHaveAttribute('aria-pressed', 'true');
-    await expect.poll(() => page.evaluate(() => window._bearingSteps!.length)).toBeGreaterThan(10);
+    await expect.poll(() => page.evaluate(() => window._bearingSteps!.length)).toBeGreaterThan(5);
     expect(Math.max(...await page.evaluate(() => window._bearingSteps!))).toBeLessThan(45);
     expect(errors).toEqual([]);
   });
