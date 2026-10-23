@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './hash';
 
 beforeEach(() => {
@@ -28,6 +28,18 @@ describe('updateHash', () => {
   it('writes the parameters to the hash without encoding slashes', () => {
     updateHash(new URLSearchParams({ map: '14/35.6812/139.7671', style: 'geolonia/gsi' }));
     expect(window.location.hash).toBe('#map=14/35.6812/139.7671&style=geolonia/gsi');
+  });
+
+  it('does not fire hashchange, so MapLibre does not move the camera to the old position in the hash', async () => {
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 10));
+    // hashchange は非同期に届くので、前のテストで書いたハッシュの分が届き終わるのを待つ
+    await wait();
+    const listener = vi.fn();
+    window.addEventListener('hashchange', listener);
+    updateHash(new URLSearchParams({ style: 'geolonia/gsi' }));
+    await wait();
+    window.removeEventListener('hashchange', listener);
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it('round-trips with parseHash', () => {

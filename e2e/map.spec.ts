@@ -161,6 +161,7 @@ test('keeps the order of the controls in the top-right corner', async ({ page })
     'maplibregl-ctrl-zoom-out',
     'maplibregl-ctrl-compass',
     'maplibregl-ctrl-geolocate',
+    'maplibregl-ctrl-circle-flight',
   ]);
 });
 
@@ -200,4 +201,87 @@ test('writes the camera into the URL hash when the page opens without one', asyn
   await styleSelect(page).selectOption('geolonia/gsi');
   await expect.poll(async () => (await getHashParams(page)).get('style')).toBe('geolonia/gsi');
   expect((await getHashParams(page)).get('map')).toMatch(/^[\d.]+\/[\d.-]+\/[\d.-]+/);
+});
+
+test('starts and stops the circle flight with its button', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671/0/0&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const button = page.locator('.maplibregl-ctrl-circle-flight');
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  await expect(button).toHaveAccessibleName('サークル飛行');
+  await expect(button).toHaveAttribute('title', 'サークル飛行を開始');
+
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await expect(button).toHaveAttribute('title', 'サークル飛行を停止');
+  // 回りながら斜めから見下ろす
+  await expect.poll(() => page.evaluate(() => window._mainMap!.getBearing())).toBeGreaterThan(5);
+  await expect.poll(() => page.evaluate(() => window._mainMap!.getPitch())).toBeGreaterThan(30);
+  const { lng, lat } = await page.evaluate(() => window._mainMap!.getCenter());
+  expect(lng).toBeCloseTo(139.7671, 3);
+  expect(lat).toBeCloseTo(35.6812, 3);
+
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  const bearing = await page.evaluate(() => window._mainMap!.getBearing());
+  await page.waitForTimeout(1_000);
+  expect(await page.evaluate(() => window._mainMap!.getBearing())).toBe(bearing);
+});
+
+test('stops the circle flight when the map is dragged', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671/0/60&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const button = page.locator('.maplibregl-ctrl-circle-flight');
+  await button.click();
+  await expect.poll(() => page.evaluate(() => window._mainMap!.getBearing())).toBeGreaterThan(1);
+
+  const canvas = page.locator('.maplibregl-canvas');
+  const box = (await canvas.boundingBox())!;
+  const centerBefore = await page.evaluate(() => window._mainMap!.getCenter());
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 50, box.y + box.height / 2 + 50, { steps: 5 });
+  await page.mouse.up();
+
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  // 止めたあとも、同じドラッグで地図は動く
+  const centerAfter = await page.evaluate(() => window._mainMap!.getCenter());
+  expect(centerAfter).not.toEqual(centerBefore);
+  const bearing = await page.evaluate(() => window._mainMap!.getBearing());
+  await page.waitForTimeout(1_000);
+  expect(await page.evaluate(() => window._mainMap!.getBearing())).toBe(bearing);
+});
+
+test.describe('with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('still flies in a circle when the OS asks for reduced motion', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await page.goto('/#map=14/35.6812/139.7671/0/60&style=geolonia/basic-v2');
+    await waitForMap(page);
+
+    // 押したのは利用者なので、動きを減らす設定でも 1/4 周ずつ飛ばさずに回す
+    await page.locator('.maplibregl-ctrl-circle-flight').click();
+    await expect(page.locator('.maplibregl-ctrl-circle-flight')).toHaveAttribute('aria-pressed', 'true');
+    const bearing = await page.evaluate(() => window._mainMap!.getBearing());
+    expect(bearing).toBeLessThan(45);
+    expect(errors).toEqual([]);
+  });
+});
+
+test('keeps flying and keeps the bearing when the style changes', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671/0/60&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const button = page.locator('.maplibregl-ctrl-circle-flight');
+  await button.click();
+  await expect.poll(() => page.evaluate(() => window._mainMap!.getBearing())).toBeGreaterThan(10);
+
+  const before = await page.evaluate(() => window._mainMap!.getBearing());
+  await styleSelect(page).selectOption('geolonia/gsi');
+  await expect.poll(async () => (await getHashParams(page)).get('style')).toBe('geolonia/gsi');
+  await page.waitForTimeout(1_000);
+
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => window._mainMap!.getBearing())).toBeGreaterThan(before);
 });

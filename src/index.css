@@ -26,3 +26,12 @@ a.ext:after {
 .openstreetmap-link:visited {
   color: black;
 }
+
+/* サークル飛行のボタン。止まっているときは回る矢印、回っているときは停止の四角を出す */
+.maplibregl-ctrl button.maplibregl-ctrl-circle-flight .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22.5 14.5a8 8 0 1 1-2.34-5.66'/%3E%3Cpath d='M20.5 5v4.5H16'/%3E%3Ccircle cx='14.5' cy='14.5' r='1.5' fill='%23333' stroke='none'/%3E%3C/svg%3E");
+}
+
+.maplibregl-ctrl button.maplibregl-ctrl-circle-flight[aria-pressed="true"] .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'%3E%3Crect x='9.5' y='9.5' width='10' height='10' rx='1.5' fill='%23333'/%3E%3C/svg%3E");
+}

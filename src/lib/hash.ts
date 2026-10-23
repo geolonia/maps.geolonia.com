@@ -4,8 +4,9 @@ export const parseHash = (url?: Location | URL) => {
   return q;
 };
 
+// location.hash に代入すると hashchange が起き、MapLibre の hash がカメラをハッシュの位置に戻すので、履歴を書き換えて済ませる
 export const updateHash = (q: URLSearchParams) => {
-  window.location.hash = `#${q.toString().replace(/%2F/g, '/')}`;
+  window.history.replaceState(window.history.state, '', `#${q.toString().replace(/%2F/g, '/')}`);
 };
 
 export const parseTilesetOverrideHash = () => {
