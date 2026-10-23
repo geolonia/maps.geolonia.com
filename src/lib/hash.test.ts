@@ -52,15 +52,25 @@ describe('updateHash', () => {
 describe('parseTilesetOverrideHash', () => {
   it('maps each tileset ID to its replacement', () => {
     window.location.hash = '#tilesetOverride=gsi:gsi-next;osm:osm-dev';
-    expect(parseTilesetOverrideHash()).toEqual({ gsi: 'gsi-next', osm: 'osm-dev' });
+    expect(parseTilesetOverrideHash()).toEqual(new Map([['gsi', 'gsi-next'], ['osm', 'osm-dev']]));
   });
 
-  it('returns a map with an empty key when there is no override', () => {
-    expect(parseTilesetOverrideHash()).toEqual({ '': undefined });
+  it('returns an empty map when there is no override', () => {
+    expect(parseTilesetOverrideHash()).toEqual(new Map());
   });
 
-  it('keeps everything after the first colon in the replacement ID', () => {
+  it('drops everything after the second colon in the replacement ID', () => {
     window.location.hash = '#tilesetOverride=gsi:a:b';
-    expect(parseTilesetOverrideHash()).toEqual({ gsi: 'a' });
+    expect(parseTilesetOverrideHash()).toEqual(new Map([['gsi', 'a']]));
+  });
+
+  it('ignores entries without a tileset ID or a replacement', () => {
+    window.location.hash = '#tilesetOverride=gsi;:osm-dev;osm:;;basic:basic-next';
+    expect(parseTilesetOverrideHash()).toEqual(new Map([['basic', 'basic-next']]));
+  });
+
+  it('keeps names of Object.prototype properties as ordinary tileset IDs', () => {
+    window.location.hash = '#tilesetOverride=__proto__:a;constructor:b';
+    expect(parseTilesetOverrideHash()).toEqual(new Map([['__proto__', 'a'], ['constructor', 'b']]));
   });
 });

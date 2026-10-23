@@ -9,11 +9,15 @@ export const updateHash = (q: URLSearchParams) => {
   window.history.replaceState(window.history.state, '', `#${q.toString().replace(/%2F/g, '/')}`);
 };
 
+// 普通のオブジェクトだと constructor や __proto__ のような ID が Object.prototype のプロパティと重なるので、Map にする
 export const parseTilesetOverrideHash = () => {
   const overrideStr = parseHash().get('tilesetOverride');
-  return (overrideStr || '').split(';').reduce<{[key: string]: string}>((map, current) => {
-    const [styleId, newId] = current.split(':', 2);
-    map[styleId] = newId;
-    return map;
-  }, {});
+  const replaceMap = new Map<string, string>();
+  for (const entry of (overrideStr || '').split(';')) {
+    const [tilesetId, newId] = entry.split(':', 2);
+    if (tilesetId && newId) {
+      replaceMap.set(tilesetId, newId);
+    }
+  }
+  return replaceMap;
 };
