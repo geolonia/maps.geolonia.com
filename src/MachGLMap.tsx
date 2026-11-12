@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { IControl, Map as MaplibreMap } from 'maplibre-gl';
 import { CircleFlightControl } from './lib/circle-flight-control';
-import { applyThreeDVisibility, type ThreeDMap } from './lib/three-d';
+import { addPlateauBuildings, type PlateauMap } from './lib/plateau';
 
 // リリース前のため、0.x の最新を CDN から読む。MapLibre を使うときは読み込まない
 const MACH_GL_BASE = 'https://cdn.geolonia.com/mach-gl/v0/';
@@ -13,8 +13,10 @@ type ControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 interface MachMap {
   addControl(control: IControl, position?: ControlPosition): this;
   on(type: string, listener: () => void): this;
-  getStyle(): ReturnType<ThreeDMap['getStyle']>;
-  setLayoutProperty: ThreeDMap['setLayoutProperty'];
+  getSource: PlateauMap['getSource'];
+  getLayer: PlateauMap['getLayer'];
+  addSource: PlateauMap['addSource'];
+  addLayer: PlateauMap['addLayer'];
   setStyle(style: string): this;
   jumpTo(options: object): this;
   stop?: () => this;
@@ -80,6 +82,8 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
     Promise.all([
       import(/* @vite-ignore */ `${MACH_GL_BASE}mach-gl.js`) as Promise<MachGLModule>,
       import(/* @vite-ignore */ `${MACH_GL_BASE}controls.js`) as Promise<MachGLControlsModule>,
+      // 読み込むだけで、スタイルの type: "bld" のソースとレイヤーを描けるようになる
+      import(/* @vite-ignore */ `${MACH_GL_BASE}bld.js`),
     ]).then(([ mach, controls ]) => {
       if (cancelled || !containerRef.current) return;
 
@@ -113,8 +117,8 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
 
       // 検索やスタイルのメタデータの処理は MapLibre と同じ API で書いてあるので、そのまま渡す
       map.on('load', () => onLoad(map as unknown as MaplibreMap));
-      // MapLibre 側は maps-core の 3d で建物を立てているので、スタイルを読むたびに同じことをする
-      map.on('style.load', () => applyThreeDVisibility(map));
+      // 建物は PLATEAU の 3D 都市モデルで立てる。ベースマップの押し出した建物（visible-on-3d）は重なるので出さない
+      map.on('style.load', () => addPlateauBuildings(map));
     }).catch((err: unknown) => {
       if (cancelled) return;
       // eslint-disable-next-line no-console
