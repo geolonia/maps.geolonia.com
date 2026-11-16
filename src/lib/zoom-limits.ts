@@ -14,15 +14,26 @@ export const createZoomLimitsUpdater = (map: ZoomLimitsMap) => {
   let max: number | undefined;
   let min: number | undefined;
   return (metadata: StyleZoomMetadata) => {
-    const nextMax = metadata['geolonia:maxzoom'] || undefined;
-    const nextMin = metadata['geolonia:minzoom'] || undefined;
-    if (nextMax !== max) {
+    const nextMax = metadata['geolonia:maxzoom'] ?? undefined;
+    const nextMin = metadata['geolonia:minzoom'] ?? undefined;
+    // 地図に受け入れられてから覚える。投げたときは次の styledata でもう一度渡す
+    const applyMax = () => {
+      if (nextMax === max) return;
+      map.setMaxZoom(nextMax);
       max = nextMax;
-      map.setMaxZoom(max);
-    }
-    if (nextMin !== min) {
+    };
+    const applyMin = () => {
+      if (nextMin === min) return;
+      map.setMinZoom(nextMin);
       min = nextMin;
-      map.setMinZoom(min);
+    };
+    // 下限が上限を超える呼び出しは投げるので、新しい下限が今の上限より上なら上限から、それ以外は下限から渡す
+    if (nextMin !== undefined && max !== undefined && nextMin > max) {
+      applyMax();
+      applyMin();
+    } else {
+      applyMin();
+      applyMax();
     }
   };
 };

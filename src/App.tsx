@@ -7,7 +7,7 @@ import { normalize } from '@geolonia/normalize-any-latlng';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './lib/hash';
 import { resolveLanguage, styleIdToUrl } from './lib/style';
 import { getCurrentSavedState, getDefaultCameraOptions, type InitialSavedState } from './lib/saved-state';
-import { formatPosition } from './lib/position';
+import { formatCameraHash, formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
 import { coordinatesToFeatureCollection } from './lib/coordinates';
 import { nextStage, resolveStage } from './lib/stage';
@@ -236,6 +236,17 @@ const App: React.FC = () => {
     return resolveStage(parseHash().get('stage'), stored);
   }, []);
 
+  // 読み込み直した後も同じ位置から始める。MapLibre も MachGL も moveend の後に間引いてハッシュの map= を書くので、カメラが動いている間は今の位置と限らない
+  const reloadWithHashParam = useCallback((key: string, value: string) => {
+    const hashParams = parseHash();
+    hashParams.set(key, value);
+    if (mapRef.current) {
+      hashParams.set('map', formatCameraHash(mapRef.current));
+    }
+    updateHash(hashParams);
+    document.location.reload();
+  }, []);
+
   const handleStageChange = useCallback<React.MouseEventHandler<HTMLButtonElement>>((ev) => {
     ev.preventDefault();
     const newStage = nextStage(stage);
@@ -244,11 +255,8 @@ const App: React.FC = () => {
     } catch {
       // no-op
     }
-    const hashParams = parseHash();
-    hashParams.set('stage', newStage);
-    updateHash(hashParams);
-    document.location.reload();
-  }, [stage]);
+    reloadWithHashParam('stage', newStage);
+  }, [stage, reloadWithHashParam]);
 
   const renderer = useMemo(() => {
     let stored: string | null = null;
@@ -260,7 +268,7 @@ const App: React.FC = () => {
     return resolveRenderer(parseHash().get('renderer'), stored);
   }, []);
 
-  // 地図ライブラリごと入れ替えるので、stage と同じく読み込み直す。位置はハッシュの map= で引き継がれる
+  // 地図ライブラリごと入れ替えるので、stage と同じく読み込み直す。位置はハッシュの map= で引き継ぐ
   const handleRendererChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>((ev) => {
     const newRenderer = ev.target.value;
     if (!isRenderer(newRenderer) || newRenderer === renderer) return;
@@ -269,11 +277,8 @@ const App: React.FC = () => {
     } catch {
       // no-op
     }
-    const hashParams = parseHash();
-    hashParams.set('renderer', newRenderer);
-    updateHash(hashParams);
-    document.location.reload();
-  }, [renderer]);
+    reloadWithHashParam('renderer', newRenderer);
+  }, [renderer, reloadWithHashParam]);
 
   const settingsPanel = (
     <div className="settings-panel">
