@@ -6,6 +6,7 @@ export type StyleZoomMetadata = {
 export type ZoomLimitsMap = {
   setMaxZoom(zoom?: number): unknown;
   setMinZoom(zoom?: number): unknown;
+  getMaxZoom(): number;
 };
 
 // スタイルのメタデータにあるズームの上限と下限を地図に渡す。styledata はソースやレイヤーを足すたびにも起きるので、値が変わったときだけ渡す
@@ -27,8 +28,9 @@ export const createZoomLimitsUpdater = (map: ZoomLimitsMap) => {
       map.setMinZoom(nextMin);
       min = nextMin;
     };
-    // 下限が上限を超える呼び出しは投げるので、新しい下限が今の上限より上なら上限から、それ以外は下限から渡す
-    if (nextMin !== undefined && max !== undefined && nextMin > max) {
+    // 下限が上限を超える呼び出しは投げるので、新しい下限が地図の今の上限より上なら上限から、それ以外は下限から渡す
+    // 覚えた値でなく地図に聞くのは、覚えた値が無いとき（初回や、前のスタイルが上限を外した後）も地図の既定の上限で比べるため
+    if (nextMin !== undefined && nextMin > map.getMaxZoom()) {
       applyMax();
       applyMin();
     } else {

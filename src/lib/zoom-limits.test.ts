@@ -5,7 +5,7 @@ import { createZoomLimitsUpdater, type ZoomLimitsMap } from './zoom-limits';
 const fakeMap = () => {
   const calls: string[] = [];
   let max = 22;
-  let min = 0;
+  let min = -2;
   const map: ZoomLimitsMap = {
     setMaxZoom: (z) => {
       const next = z ?? 22;
@@ -14,11 +14,12 @@ const fakeMap = () => {
       calls.push(`max:${z}`);
     },
     setMinZoom: (z) => {
-      const next = z ?? 0;
+      const next = z ?? -2;
       if (next > max) throw new Error('minZoom must be less than or equal to maxZoom');
       min = next;
       calls.push(`min:${z}`);
     },
+    getMaxZoom: () => max,
   };
   return { map, calls };
 };
@@ -50,6 +51,21 @@ describe('createZoomLimitsUpdater', () => {
     update({ 'geolonia:maxzoom': 12, 'geolonia:minzoom': 4 });
     update({ 'geolonia:maxzoom': 18, 'geolonia:minzoom': 16 });
     expect(calls).toEqual([ 'min:4', 'max:12', 'max:18', 'min:16' ]);
+  });
+
+  it('raises the maximum first on the first call when the new minimum is above the default maximum', () => {
+    const { map, calls } = fakeMap();
+    createZoomLimitsUpdater(map)({ 'geolonia:maxzoom': 24, 'geolonia:minzoom': 23 });
+    expect(calls).toEqual([ 'max:24', 'min:23' ]);
+  });
+
+  it('raises the maximum first when the previous style removed the limits', () => {
+    const { map, calls } = fakeMap();
+    const update = createZoomLimitsUpdater(map);
+    update({ 'geolonia:maxzoom': 18, 'geolonia:minzoom': 4 });
+    update({});
+    update({ 'geolonia:maxzoom': 24, 'geolonia:minzoom': 23 });
+    expect(calls).toEqual([ 'min:4', 'max:18', 'min:undefined', 'max:undefined', 'max:24', 'min:23' ]);
   });
 
   it('applies a limit again when the map rejected it the last time', () => {
