@@ -36,16 +36,33 @@ a.ext:after {
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'%3E%3Crect x='9.5' y='9.5' width='10' height='10' rx='1.5' fill='%23333'/%3E%3C/svg%3E");
 }
 
+/* 設定パネルの部品を 1 行に並べ、高さと縦の位置をそろえる */
+.settings-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.settings-panel select,
+.settings-panel button,
+.renderer-switch {
+  box-sizing: border-box;
+  height: 24px;
+  margin: 0;
+  font-size: 13px;
+}
+
 /* 地図の上でも読めるように、セレクトボックスと同じく白地に載せる */
 .renderer-switch {
   display: inline-flex;
+  align-items: center;
   gap: 8px;
-  padding: 1px 6px;
+  padding: 0 6px;
   border: 1px solid #767676;
   border-radius: 3px;
   background: #fff;
-  font-size: 13px;
-  vertical-align: middle;
 }
 
 .renderer-switch label {
@@ -57,4 +74,9 @@ a.ext:after {
 
 .renderer-switch input {
   margin: 0;
+}
+
+/* v1 と dev の切り替えは社内の開発者しか使わないので、ほかの部品より控えめに出す */
+.stage-switch {
+  opacity: 0.7;
 }

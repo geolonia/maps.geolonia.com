@@ -5,7 +5,7 @@ import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './lib/hash';
-import { styleIdToUrl } from './lib/style';
+import { resolveLanguage, styleIdToUrl } from './lib/style';
 import { getCurrentSavedState, getDefaultCameraOptions, type InitialSavedState } from './lib/saved-state';
 import { formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
@@ -276,11 +276,10 @@ const App: React.FC = () => {
   }, [renderer]);
 
   const settingsPanel = (
-    <>
+    <div className="settings-panel">
       <select
         onChange={onMapStyleChange}
         defaultValue={defaultStyleFromHash}
-        style={{ marginRight: '10px' }}
       >
         <optgroup label="標準スタイル">
           <option value="geolonia/basic-v2">Basic v2</option>
@@ -304,13 +303,12 @@ const App: React.FC = () => {
       <select
         onChange={onMapLanguageChange}
         defaultValue={defaultLanguageFromHash}
-        style={{ marginRight: '10px' }}
       >
         <option value="auto">Auto / 自動判定</option>
         <option value="ja">日本語</option>
         <option value="en">English</option>
       </select>
-      <div role="radiogroup" aria-label="地図の描画ライブラリ" className="renderer-switch" style={{ marginRight: '10px' }}>
+      <div role="radiogroup" aria-label="地図の描画ライブラリ" className="renderer-switch">
         {RENDERERS.map(({ value, label }) => (
           <label key={value}>
             <input
@@ -324,16 +322,13 @@ const App: React.FC = () => {
           </label>
         ))}
       </div>
-      {/* MachGL には stage の切り替えが無いので、MapLibre のときだけ出す */}
-      {renderer === 'maplibre' && (
-        <button
-          type="button"
-          onClick={handleStageChange}
-          style={{ marginRight: '10px' }}
-        >
-          {stage}
-        </button>
-      )}
+      <button
+        type="button"
+        className="stage-switch"
+        onClick={handleStageChange}
+      >
+        {stage}
+      </button>
       <a
         href={`https://openstreetmap.org/#map=${zLatLngString}`}
         target="_blank"
@@ -342,7 +337,7 @@ const App: React.FC = () => {
       >
         OpenStreetMap で開く
       </a>
-    </>
+    </div>
   );
 
   const searchPanel = (
@@ -359,14 +354,15 @@ const App: React.FC = () => {
     return (
       <Div100vh>
         <MachGLMap
-          style={currentStyleUrl}
+          style={styleIdToUrl(style, resolveLanguage(language, navigator.languages))}
           lang={language}
+          stage={stage}
           center={initialCamera.center}
           zoom={initialCamera.zoom}
           transformRequest={transformRequest}
           onLoad={onLoad}
         >
-          <div>{settingsPanel}</div>
+          {settingsPanel}
           <div style={{ marginTop: '10px' }}>{searchPanel}</div>
         </MachGLMap>
       </Div100vh>

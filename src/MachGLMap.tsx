@@ -34,6 +34,7 @@ interface MachGLGlobal {
     apiKey?: string;
     hash?: boolean | string;
     transformRequest?: (url: string) => { url: string } | undefined;
+    stage?: string;
     navigationControl?: boolean | ControlPosition;
   }) => MachMap;
   NavigationControl: new (options?: { visualizePitch?: boolean }) => IControl;
@@ -55,12 +56,14 @@ const loadMachGL = () => {
     const script = document.createElement('script');
     script.src = MACH_GL_URL;
     script.async = true;
-    script.onload = () => (window.MachGL ? resolve(window.MachGL) : reject(new Error('window.MachGL がありません')));
-    script.onerror = () => {
+    // 失敗したら次に選び直したときに読み直せるよう、読み込み中の状態を捨てる
+    const fail = (message: string) => {
       loading = undefined;
       script.remove();
-      reject(new Error(`${MACH_GL_URL} を読み込めませんでした`));
+      reject(new Error(message));
     };
+    script.onload = () => (window.MachGL ? resolve(window.MachGL) : fail('window.MachGL がありません'));
+    script.onerror = () => fail(`${MACH_GL_URL} を読み込めませんでした`);
     document.head.appendChild(script);
   });
   return loading;
@@ -82,6 +85,7 @@ class PanelControl implements IControl {
 type Props = {
   style: string;
   lang: string;
+  stage: string;
   center: [number, number];
   zoom: number;
   transformRequest: (url: string) => { url: string };
@@ -89,21 +93,23 @@ type Props = {
   children: React.ReactNode;
 };
 
-const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformRequest, onLoad, children }) => {
+const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transformRequest, onLoad, children }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MachMap>();
   const [ panel, setPanel ] = useState<HTMLElement>();
   const [ error, setError ] = useState<string>();
 
   // 地図は最初の 1 回だけ作る。スタイルの変更は下の effect で setStyle に渡す
-  const initialRef = useRef({ style, lang, center, zoom, transformRequest, onLoad });
+  // stage を変えるとページを読み直すので、作るときに渡せば足りる
+  const initialRef = useRef({ style, lang, stage, center, zoom, transformRequest, onLoad });
 
   useEffect(() => {
     let cancelled = false;
-    const { style, lang, center, zoom, transformRequest, onLoad } = initialRef.current;
 
     loadMachGL().then((mach) => {
       if (cancelled || !containerRef.current) return;
+      // 読み込みを待つ間に変わったスタイルも拾えるよう、作る直前に読む
+      const { style, lang, stage, center, zoom, transformRequest, onLoad } = initialRef.current;
 
       const map = new mach.Map({
         container: containerRef.current,
@@ -114,6 +120,7 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
         apiKey: 'YOUR-API-KEY',
         hash: 'map',
         transformRequest,
+        stage,
         // 既定ではズームのボタンを自分で置くので止め、下でほかのコントロールと同じ順に置く
         navigationControl: false,
       });
@@ -135,7 +142,8 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
       map.addControl(panelControl, 'top-left');
       setPanel(panelControl.container);
 
-      // 検索やスタイルのメタデータの処理は MapLibre と同じ API で書いてあるので、そのまま渡す
+      // 検索の処理は MapLibre と同じ API で書いてあるので、そのまま渡す
+      // MachGL の getStyle() はスタイルの metadata を返さないので、メタデータにあるズームの上限と下限は MachGL では効かない
       map.on('load', () => onLoad(map as unknown as MaplibreMap));
       // 建物は PLATEAU の 3D 都市モデルで立てる。ベースマップの押し出した建物（visible-on-3d）は重なるので出さない
       map.on('style.load', () => addPlateauBuildings(map));
@@ -154,15 +162,20 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || style === initialRef.current.style) return;
+    if (style === initialRef.current.style) return;
     initialRef.current.style = style;
-    map.setStyle(style);
+    mapRef.current?.setStyle(style);
   }, [style]);
 
   return (
     <div ref={containerRef} style={{ width: '100vw', height: '100%' }}>
-      {error && <p role="alert" style={{ padding: '1em' }}>{error}</p>}
+      {/* 読み込めなくても MapLibre に戻せるよう、設定パネルは出しておく */}
+      {error && (
+        <div style={{ padding: '1em' }}>
+          <p role="alert">{error}</p>
+          {children}
+        </div>
+      )}
       {/* @types/react-dom が別の版の @types/react を抱えていて ReactPortal の型が合わないので、型だけ合わせる */}
       {panel && (createPortal(children, panel) as unknown as React.ReactNode)}
     </div>
