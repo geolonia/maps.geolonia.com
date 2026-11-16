@@ -4,8 +4,9 @@ import type { IControl, Map as MaplibreMap } from 'maplibre-gl';
 import { CircleFlightControl } from './lib/circle-flight-control';
 import { addPlateauBuildings, type PlateauMap } from './lib/plateau';
 
-// リリース前のため、0.x の最新を CDN から読む。MapLibre を使うときは読み込まない
-const MACH_GL_BASE = 'https://cdn.geolonia.com/mach-gl/v0/';
+// MachGL は選んだときだけ CDN から読む。MapLibre を使うときは読み込まない
+// 読み込むと window.MachGL に地図・コントロール・PLATEAU の建物（type: "bld"）がそろう。API キーは src のクエリから読まれる
+const MACH_GL_URL = 'https://cdn.geolonia.com/machgl/main/?geolonia-api-key=YOUR-API-KEY';
 
 type ControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
@@ -23,7 +24,7 @@ interface MachMap {
   remove(): void;
 }
 
-interface MachGLModule {
+interface MachGLGlobal {
   Map: new (options: {
     container: HTMLElement;
     style: string;
@@ -33,15 +34,37 @@ interface MachGLModule {
     apiKey?: string;
     hash?: boolean | string;
     transformRequest?: (url: string) => { url: string } | undefined;
+    navigationControl?: boolean | ControlPosition;
   }) => MachMap;
   NavigationControl: new (options?: { visualizePitch?: boolean }) => IControl;
-}
-
-interface MachGLControlsModule {
   FullscreenControl: new () => IControl;
   GeolocateControl: new () => IControl;
   ScaleControl: new () => IControl;
 }
+
+declare global {
+  interface Window {
+    MachGL?: MachGLGlobal;
+  }
+}
+
+// ES モジュールではなく普通のスクリプトとして配られているので、script 要素で読む
+let loading: Promise<MachGLGlobal> | undefined;
+const loadMachGL = () => {
+  loading ??= new Promise<MachGLGlobal>((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = MACH_GL_URL;
+    script.async = true;
+    script.onload = () => (window.MachGL ? resolve(window.MachGL) : reject(new Error('window.MachGL がありません')));
+    script.onerror = () => {
+      loading = undefined;
+      script.remove();
+      reject(new Error(`${MACH_GL_URL} を読み込めませんでした`));
+    };
+    document.head.appendChild(script);
+  });
+  return loading;
+};
 
 // React の子要素を描くための入れ物を、地図のコントロールとして置く
 class PanelControl implements IControl {
@@ -79,12 +102,7 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
     let cancelled = false;
     const { style, lang, center, zoom, transformRequest, onLoad } = initialRef.current;
 
-    Promise.all([
-      import(/* @vite-ignore */ `${MACH_GL_BASE}mach-gl.js`) as Promise<MachGLModule>,
-      import(/* @vite-ignore */ `${MACH_GL_BASE}controls.js`) as Promise<MachGLControlsModule>,
-      // 読み込むだけで、スタイルの type: "bld" のソースとレイヤーを描けるようになる
-      import(/* @vite-ignore */ `${MACH_GL_BASE}bld.js`),
-    ]).then(([ mach, controls ]) => {
+    loadMachGL().then((mach) => {
       if (cancelled || !containerRef.current) return;
 
       const map = new mach.Map({
@@ -96,6 +114,8 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
         apiKey: 'YOUR-API-KEY',
         hash: 'map',
         transformRequest,
+        // 既定ではズームのボタンを自分で置くので止め、下でほかのコントロールと同じ順に置く
+        navigationControl: false,
       });
       mapRef.current = map;
 
@@ -105,11 +125,11 @@ const MachGLMap: React.FC<Props> = ({ style, lang, center, zoom, transformReques
       }
 
       // MapLibre のときと同じ順に置く
-      map.addControl(new controls.FullscreenControl(), 'top-right');
+      map.addControl(new mach.FullscreenControl(), 'top-right');
       map.addControl(new mach.NavigationControl({ visualizePitch: true }), 'top-right');
-      map.addControl(new controls.GeolocateControl(), 'top-right');
+      map.addControl(new mach.GeolocateControl(), 'top-right');
       map.addControl(new CircleFlightControl(), 'top-right');
-      map.addControl(new controls.ScaleControl(), 'bottom-right');
+      map.addControl(new mach.ScaleControl(), 'bottom-right');
 
       const panelControl = new PanelControl();
       map.addControl(panelControl, 'top-left');
