@@ -126,8 +126,7 @@ const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transfor
         stage,
         // 既定ではズームのボタンを自分で置くので止め、下でほかのコントロールと同じ順に置く
         navigationControl: false,
-        // 作れなかったとき（WebGL2 が使えないなど）に MachGL が地図の上に重ねる案内を止める
-        // 重なると、下で出すエラーと設定パネルが押せなくなり、MapLibre に戻せない
+        // 作れなかったとき（WebGL2 が使えないなど）に MachGL が出す案内は止め、こちらのエラーと設定パネルを出す
         errorMessage: false,
       });
       mapRef.current = map;
@@ -174,7 +173,9 @@ const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transfor
   }, [style]);
 
   return (
-    <div ref={containerRef} style={{ width: '100vw', height: '100%' }}>
+    <div style={{ width: '100vw', height: '100%' }}>
+      {/* MachGL は地図を作れなかったときも、この中に canvas などを残す。エラーと設定パネルはその外に描く */}
+      <div ref={containerRef} style={{ width: '100%', height: '100%', display: error ? 'none' : undefined }} />
       {/* 読み込めなくても MapLibre に戻せるよう、設定パネルは出しておく */}
       {error && (
         <div style={{ padding: '1em' }}>

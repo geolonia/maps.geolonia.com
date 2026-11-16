@@ -354,7 +354,7 @@ const App: React.FC = () => {
     return (
       <Div100vh>
         <MachGLMap
-          style={styleIdToUrl(style, resolveLanguage(language, navigator.languages))}
+          style={styleIdToUrl(style, resolveLanguage(language, navigator.languages, navigator.language))}
           lang={language}
           stage={stage}
           center={initialCamera.center}

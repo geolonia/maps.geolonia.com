@@ -74,12 +74,17 @@ describe('MachGLMap', () => {
     expect(machGLScript()).not.toBeNull();
   });
 
-  it('keeps its children on screen and stops the MachGL overlay when the map cannot be created', async () => {
+  it('keeps its children usable and stops the MachGL overlay when the map cannot be created', async () => {
     const options: object[] = [];
+    let canvas: HTMLCanvasElement | undefined;
+    // 本物の MachGL と同じく、地図の入れ物に全面の canvas を足してから投げる
     window.MachGL = {
       Map: class {
-        constructor(opts: object) {
+        constructor(opts: { container: HTMLElement }) {
           options.push(opts);
+          canvas = document.createElement('canvas');
+          canvas.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%';
+          opts.container.appendChild(canvas);
           throw new Error('WebGL2 is not supported');
         }
       },
@@ -89,7 +94,14 @@ describe('MachGLMap', () => {
       machGLScript()?.dispatchEvent(new Event('load'));
     });
     expect(options).toEqual([ expect.objectContaining({ errorMessage: false, stage: 'v1' }) ]);
-    expect(view.querySelector('[role=alert]')?.textContent).toContain('MachGL で地図を表示できませんでした');
-    expect(view.querySelector('button')?.textContent).toBe('MapLibre');
+    const alert = view.querySelector('[role=alert]');
+    const button = view.querySelector('button');
+    expect(alert?.textContent).toContain('MachGL で地図を表示できませんでした');
+    expect(button?.textContent).toBe('MapLibre');
+    // canvas の入った地図の入れ物は隠し、エラーと設定パネルはその外に置く
+    const mapContainer = canvas?.parentElement;
+    expect(mapContainer?.style.display).toBe('none');
+    expect(mapContainer?.contains(alert ?? null)).toBe(false);
+    expect(mapContainer?.contains(button ?? null)).toBe(false);
   });
 });

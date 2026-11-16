@@ -30,13 +30,18 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage('ja', [ 'en-US' ])).toBe('ja');
   });
 
-  it('picks Japanese for auto when the browser prefers Japanese', () => {
+  it('picks Japanese for auto when the first browser language is ja or ja-JP', () => {
     expect(resolveLanguage('auto', [ 'ja-JP', 'en-US' ])).toBe('ja');
     expect(resolveLanguage('auto', [ 'ja' ])).toBe('ja');
   });
 
-  it('picks English for auto otherwise', () => {
+  it('picks English for auto otherwise, as maps-core does', () => {
     expect(resolveLanguage('auto', [ 'en-US', 'ja-JP' ])).toBe('en');
+    expect(resolveLanguage('auto', [ 'ja-Hira' ])).toBe('en');
     expect(resolveLanguage('auto', [])).toBe('en');
+  });
+
+  it('falls back to the single browser language when the list is empty', () => {
+    expect(resolveLanguage('auto', [], 'ja-JP')).toBe('ja');
   });
 });
