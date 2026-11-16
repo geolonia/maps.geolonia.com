@@ -44,6 +44,7 @@ afterEach(async () => {
   await act(async () => root?.unmount());
   container?.remove();
   machGLScript()?.remove();
+  delete window.MachGL;
 });
 
 describe('MachGLMap', () => {
@@ -71,5 +72,24 @@ describe('MachGLMap', () => {
     await act(async () => root?.unmount());
     await render();
     expect(machGLScript()).not.toBeNull();
+  });
+
+  it('keeps its children on screen and stops the MachGL overlay when the map cannot be created', async () => {
+    const options: object[] = [];
+    window.MachGL = {
+      Map: class {
+        constructor(opts: object) {
+          options.push(opts);
+          throw new Error('WebGL2 is not supported');
+        }
+      },
+    } as unknown as NonNullable<Window['MachGL']>;
+    const view = await render();
+    await act(async () => {
+      machGLScript()?.dispatchEvent(new Event('load'));
+    });
+    expect(options).toEqual([ expect.objectContaining({ errorMessage: false, stage: 'v1' }) ]);
+    expect(view.querySelector('[role=alert]')?.textContent).toContain('MachGL で地図を表示できませんでした');
+    expect(view.querySelector('button')?.textContent).toBe('MapLibre');
   });
 });

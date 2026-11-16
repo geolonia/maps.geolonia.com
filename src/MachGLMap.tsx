@@ -36,6 +36,7 @@ interface MachGLGlobal {
     transformRequest?: (url: string) => { url: string } | undefined;
     stage?: string;
     navigationControl?: boolean | ControlPosition;
+    errorMessage?: string | false;
   }) => MachMap;
   NavigationControl: new (options?: { visualizePitch?: boolean }) => IControl;
   FullscreenControl: new () => IControl;
@@ -106,7 +107,9 @@ const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transfor
   useEffect(() => {
     let cancelled = false;
 
+    let loaded = false;
     loadMachGL().then((mach) => {
+      loaded = true;
       if (cancelled || !containerRef.current) return;
       // 読み込みを待つ間に変わったスタイルも拾えるよう、作る直前に読む
       const { style, lang, stage, center, zoom, transformRequest, onLoad } = initialRef.current;
@@ -123,6 +126,9 @@ const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transfor
         stage,
         // 既定ではズームのボタンを自分で置くので止め、下でほかのコントロールと同じ順に置く
         navigationControl: false,
+        // 作れなかったとき（WebGL2 が使えないなど）に MachGL が地図の上に重ねる案内を止める
+        // 重なると、下で出すエラーと設定パネルが押せなくなり、MapLibre に戻せない
+        errorMessage: false,
       });
       mapRef.current = map;
 
@@ -151,7 +157,7 @@ const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transfor
       if (cancelled) return;
       // eslint-disable-next-line no-console
       console.error(err);
-      setError(`MachGL を読み込めませんでした: ${String(err)}`);
+      setError(`${loaded ? 'MachGL で地図を表示できませんでした' : 'MachGL を読み込めませんでした'}: ${String(err)}`);
     });
 
     return () => {
