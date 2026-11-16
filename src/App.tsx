@@ -13,6 +13,7 @@ import { coordinatesToFeatureCollection } from './lib/coordinates';
 import { nextStage, resolveStage } from './lib/stage';
 import { CircleFlightControl } from './lib/circle-flight-control';
 import { pointBounds } from './lib/bounds';
+import { createZoomLimitsUpdater } from './lib/zoom-limits';
 import { nextRenderer, resolveRenderer } from './lib/renderer';
 import MachGLMap from './MachGLMap';
 
@@ -74,24 +75,10 @@ const App: React.FC = () => {
       setSavedState({ z: rawZoom, lat, lng });
     });
 
+    const updateZoomLimits = createZoomLimitsUpdater(map);
     map.on('styledata', () => {
       // style has changed, see if there's any metadata we need to read
-      const styleMetadata: {
-        'geolonia:maxzoom'?: number
-        'geolonia:minzoom'?: number
-      } = map.getStyle().metadata || {};
-      const maxzoom = styleMetadata['geolonia:maxzoom'];
-      if (maxzoom) {
-        map.setMaxZoom(maxzoom);
-      } else {
-        map.setMaxZoom();
-      }
-      const minzoom = styleMetadata['geolonia:minzoom'];
-      if (minzoom) {
-        map.setMinZoom(minzoom);
-      } else {
-        map.setMinZoom();
-      }
+      updateZoomLimits(map.getStyle().metadata || {});
     });
   }, [setSavedState]);
 
