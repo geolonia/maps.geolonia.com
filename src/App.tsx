@@ -14,7 +14,7 @@ import { nextStage, resolveStage } from './lib/stage';
 import { CircleFlightControl } from './lib/circle-flight-control';
 import { pointBounds } from './lib/bounds';
 import { createZoomLimitsUpdater } from './lib/zoom-limits';
-import { nextRenderer, resolveRenderer } from './lib/renderer';
+import { isRenderer, RENDERERS, resolveRenderer } from './lib/renderer';
 import MachGLMap from './MachGLMap';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
@@ -261,9 +261,9 @@ const App: React.FC = () => {
   }, []);
 
   // 地図ライブラリごと入れ替えるので、stage と同じく読み込み直す。位置はハッシュの map= で引き継がれる
-  const handleRendererChange = useCallback<React.MouseEventHandler<HTMLButtonElement>>((ev) => {
-    ev.preventDefault();
-    const newRenderer = nextRenderer(renderer);
+  const handleRendererChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>((ev) => {
+    const newRenderer = ev.target.value;
+    if (!isRenderer(newRenderer) || newRenderer === renderer) return;
     try {
       window.localStorage.setItem('_geoloniaRenderer', newRenderer);
     } catch {
@@ -329,13 +329,20 @@ const App: React.FC = () => {
           {stage}
         </button>
       )}
-      <button
-        type="button"
-        onClick={handleRendererChange}
-        title="地図の描画ライブラリを切り替える"
-      >
-        {renderer === 'mach-gl' ? 'MachGL' : 'MapLibre'}
-      </button>
+      <div role="radiogroup" aria-label="地図の描画ライブラリ" className="renderer-switch">
+        {RENDERERS.map(({ value, label }) => (
+          <label key={value}>
+            <input
+              type="radio"
+              name="renderer"
+              value={value}
+              checked={renderer === value}
+              onChange={handleRendererChange}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
     </>
   );
 

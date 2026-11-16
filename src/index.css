@@ -35,3 +35,26 @@ a.ext:after {
 .maplibregl-ctrl button.maplibregl-ctrl-circle-flight[aria-pressed="true"] .maplibregl-ctrl-icon {
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'%3E%3Crect x='9.5' y='9.5' width='10' height='10' rx='1.5' fill='%23333'/%3E%3C/svg%3E");
 }
+
+/* 地図の上でも読めるように、セレクトボックスと同じく白地に載せる */
+.renderer-switch {
+  display: inline-flex;
+  gap: 8px;
+  padding: 1px 6px;
+  border: 1px solid #767676;
+  border-radius: 3px;
+  background: #fff;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.renderer-switch label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.renderer-switch input {
+  margin: 0;
+}

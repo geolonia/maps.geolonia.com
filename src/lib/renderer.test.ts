@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextRenderer, resolveRenderer } from './renderer';
+import { isRenderer, RENDERERS, resolveRenderer } from './renderer';
 
 describe('resolveRenderer', () => {
   it('defaults to maplibre', () => {
@@ -22,9 +22,14 @@ describe('resolveRenderer', () => {
   });
 });
 
-describe('nextRenderer', () => {
-  it('toggles between maplibre and mach-gl', () => {
-    expect(nextRenderer('maplibre')).toBe('mach-gl');
-    expect(nextRenderer('mach-gl')).toBe('maplibre');
+describe('isRenderer', () => {
+  it('accepts every renderer offered as a choice', () => {
+    expect(RENDERERS.map(({ value }) => isRenderer(value))).toEqual([ true, true ]);
+  });
+
+  it('rejects anything else', () => {
+    expect(isRenderer('leaflet')).toBe(false);
+    expect(isRenderer('')).toBe(false);
+    expect(isRenderer(null)).toBe(false);
   });
 });
