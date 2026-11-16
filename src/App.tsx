@@ -310,26 +310,7 @@ const App: React.FC = () => {
         <option value="ja">日本語</option>
         <option value="en">English</option>
       </select>
-      <a
-        href={`https://openstreetmap.org/#map=${zLatLngString}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ext openstreetmap-link"
-        style={{ marginRight: '10px' }}
-      >
-        OpenStreetMap で開く
-      </a>
-      {/* MachGL には stage の切り替えが無いので、MapLibre のときだけ出す */}
-      {renderer === 'maplibre' && (
-        <button
-          type="button"
-          onClick={handleStageChange}
-          style={{ marginRight: '10px' }}
-        >
-          {stage}
-        </button>
-      )}
-      <div role="radiogroup" aria-label="地図の描画ライブラリ" className="renderer-switch">
+      <div role="radiogroup" aria-label="地図の描画ライブラリ" className="renderer-switch" style={{ marginRight: '10px' }}>
         {RENDERERS.map(({ value, label }) => (
           <label key={value}>
             <input
@@ -343,6 +324,24 @@ const App: React.FC = () => {
           </label>
         ))}
       </div>
+      {/* MachGL には stage の切り替えが無いので、MapLibre のときだけ出す */}
+      {renderer === 'maplibre' && (
+        <button
+          type="button"
+          onClick={handleStageChange}
+          style={{ marginRight: '10px' }}
+        >
+          {stage}
+        </button>
+      )}
+      <a
+        href={`https://openstreetmap.org/#map=${zLatLngString}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ext openstreetmap-link"
+      >
+        OpenStreetMap で開く
+      </a>
     </>
   );
 
