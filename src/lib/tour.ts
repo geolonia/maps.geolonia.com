@@ -104,7 +104,7 @@ export class Tour implements CameraOwner {
       this.map.on(type, this.stop);
     }
     claimCamera(this.map, this);
-    // easeTo は動いているカメラ（ほかのアニメーション）を止め、その moveend をその場で出す。それを自分の移動の終わりと取り違えないよう、最初の移動を始めてから受け取る
+    // MapLibre の easeTo は動いているカメラ（ほかのアニメーション）を止め、その moveend をその場で出す。それを自分の移動の終わりと取り違えないよう、最初の移動を始めてから受け取る
     this.next();
     this.map.on('moveend', this.handleMoveEnd);
   }
