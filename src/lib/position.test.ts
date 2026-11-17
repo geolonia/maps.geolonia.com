@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPosition } from './position';
+import { formatCameraHash, formatPosition } from './position';
 
 describe('formatPosition', () => {
   it('rounds the coordinates to a precision that depends on the zoom', () => {
@@ -33,5 +33,30 @@ describe('formatPosition', () => {
 
   it('rounds a fractional zoom up in the string', () => {
     expect(formatPosition({ lng: 139.7671, lat: 35.6812 }, 13.2).zLatLng).toBe('14/35.6812/139.7671');
+  });
+});
+
+const camera = (zoom: number, lng: number, lat: number, bearing: number, pitch: number) => ({
+  getZoom: () => zoom,
+  getCenter: () => ({ lng, lat }),
+  getBearing: () => bearing,
+  getPitch: () => pitch,
+});
+
+describe('formatCameraHash', () => {
+  it('writes the zoom, the center, the bearing and the pitch in the format of the MapLibre hash', () => {
+    expect(formatCameraHash(camera(14.123, 139.767123456, 35.681234567, 30.04, 45.4))).toBe('14.12/35.68123/139.76712/30/45');
+  });
+
+  it('leaves out the bearing and the pitch when both are 0', () => {
+    expect(formatCameraHash(camera(6, 136.944123, 35.645123, 0, 0))).toBe('6/35.645/136.944');
+  });
+
+  it('keeps the bearing and leaves out the pitch when only the pitch is 0', () => {
+    expect(formatCameraHash(camera(6, 136.944123, 35.645123, -20.25, 0))).toBe('6/35.645/136.944/-20.2');
+  });
+
+  it('writes a bearing of 0 when only the pitch is set', () => {
+    expect(formatCameraHash(camera(6, 136.944123, 35.645123, 0, 60))).toBe('6/35.645/136.944/0/60');
   });
 });

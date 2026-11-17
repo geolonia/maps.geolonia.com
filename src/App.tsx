@@ -1,17 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LngLatBounds, type GeoJSONSource, type Map as MaplibreMap, type RequestTransformFunction } from 'maplibre-gl';
+import { type GeoJSONSource, type Map as MaplibreMap } from 'maplibre-gl';
 import { Control, FullscreenControl, GeolocateControl, Map, NavigationControl, useControl } from '@geolonia/maps-react';
 import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './lib/hash';
-import { styleIdToUrl } from './lib/style';
+import { resolveLanguage, styleIdToUrl } from './lib/style';
 import { getCurrentSavedState, getDefaultCameraOptions, type InitialSavedState } from './lib/saved-state';
-import { formatPosition } from './lib/position';
+import { formatCameraHash, formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
 import { coordinatesToFeatureCollection } from './lib/coordinates';
 import { nextStage, resolveStage } from './lib/stage';
 import { CircleFlightControl } from './lib/circle-flight-control';
+import { pointBounds } from './lib/bounds';
+import { createZoomLimitsUpdater } from './lib/zoom-limits';
+import { isRenderer, RENDERERS, resolveRenderer } from './lib/renderer';
+import MachGLMap from './MachGLMap';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
   q: HTMLInputElement
@@ -71,29 +75,15 @@ const App: React.FC = () => {
       setSavedState({ z: rawZoom, lat, lng });
     });
 
+    const updateZoomLimits = createZoomLimitsUpdater(map);
     map.on('styledata', () => {
       // style has changed, see if there's any metadata we need to read
-      const styleMetadata: {
-        'geolonia:maxzoom'?: number
-        'geolonia:minzoom'?: number
-      } = map.getStyle().metadata || {};
-      const maxzoom = styleMetadata['geolonia:maxzoom'];
-      if (maxzoom) {
-        map.setMaxZoom(maxzoom);
-      } else {
-        map.setMaxZoom();
-      }
-      const minzoom = styleMetadata['geolonia:minzoom'];
-      if (minzoom) {
-        map.setMinZoom(minzoom);
-      } else {
-        map.setMinZoom();
-      }
+      updateZoomLimits(map.getStyle().metadata || {});
     });
   }, [setSavedState]);
 
   // maps-core が API キーなどを付けた後の URL が渡される
-  const transformRequest = useCallback<RequestTransformFunction>((url) => {
+  const transformRequest = useCallback((url: string) => {
     const replaceMap = parseTilesetOverrideHash();
     return { url: overrideTilesetUrl(url, replaceMap) };
   }, []);
@@ -229,15 +219,7 @@ const App: React.FC = () => {
       });
     }
 
-    let bounds: LngLatBounds | undefined;
-    for (const f of data.features) {
-      if (f.geometry.type !== 'Point') continue;
-      if (typeof bounds === 'undefined') {
-        bounds = new LngLatBounds(f.geometry.coordinates as [number, number], f.geometry.coordinates as [number, number]);
-      } else {
-        bounds.extend(f.geometry.coordinates as [number, number]);
-      }
-    }
+    const bounds = pointBounds(data);
     if (typeof bounds !== 'undefined') {
       // 結果が 1 件だと範囲の大きさが 0 になり、上限まで寄ってしまうので、街区が見える程度で止める
       map.fitBounds(bounds, { padding: 200, maxZoom: 17 });
@@ -254,6 +236,17 @@ const App: React.FC = () => {
     return resolveStage(parseHash().get('stage'), stored);
   }, []);
 
+  // 読み込み直した後も同じ位置から始める。MapLibre も MachGL も moveend の後に間引いてハッシュの map= を書くので、カメラが動いている間は今の位置と限らない
+  const reloadWithHashParam = useCallback((key: string, value: string) => {
+    const hashParams = parseHash();
+    hashParams.set(key, value);
+    if (mapRef.current) {
+      hashParams.set('map', formatCameraHash(mapRef.current));
+    }
+    updateHash(hashParams);
+    document.location.reload();
+  }, []);
+
   const handleStageChange = useCallback<React.MouseEventHandler<HTMLButtonElement>>((ev) => {
     ev.preventDefault();
     const newStage = nextStage(stage);
@@ -262,11 +255,124 @@ const App: React.FC = () => {
     } catch {
       // no-op
     }
-    const hashParams = parseHash();
-    hashParams.set('stage', newStage);
-    updateHash(hashParams);
-    document.location.reload();
-  }, [stage]);
+    reloadWithHashParam('stage', newStage);
+  }, [stage, reloadWithHashParam]);
+
+  const renderer = useMemo(() => {
+    let stored: string | null = null;
+    try {
+      stored = window.localStorage.getItem('_geoloniaRenderer');
+    } catch {
+      // no-op
+    }
+    return resolveRenderer(parseHash().get('renderer'), stored);
+  }, []);
+
+  // 地図ライブラリごと入れ替えるので、stage と同じく読み込み直す。位置はハッシュの map= で引き継ぐ
+  const handleRendererChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>((ev) => {
+    const newRenderer = ev.target.value;
+    if (!isRenderer(newRenderer) || newRenderer === renderer) return;
+    try {
+      window.localStorage.setItem('_geoloniaRenderer', newRenderer);
+    } catch {
+      // no-op
+    }
+    reloadWithHashParam('renderer', newRenderer);
+  }, [renderer, reloadWithHashParam]);
+
+  const settingsPanel = (
+    <div className="settings-panel">
+      <select
+        onChange={onMapStyleChange}
+        defaultValue={defaultStyleFromHash}
+      >
+        <optgroup label="標準スタイル">
+          <option value="geolonia/basic-v2">Basic v2</option>
+          <option value="geolonia/gsi">GSI</option>
+          <option value="geolonia/homework">Homework</option>
+          <option value="geolonia/midnight">Midnight</option>
+          <option value="geolonia/notebook">Notebook</option>
+          <option value="geolonia/red-planet">Red Planet</option>
+        </optgroup>
+        <optgroup label="SmartCity用スタイル">
+          <option value="geoloniamaps/smartcity-base">SmartCity Base</option>
+        </optgroup>
+        <optgroup label="その他">
+          <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
+          <option value="https://geolonia.github.io/openstreetmap-carto/style.json">OSM Carto</option>
+        </optgroup>
+        <optgroup label="EXPERIMENTAL | 実験的">
+          <option value="https://raw.githubusercontent.com/geolonia/basic-gsiseamlessphoto/main/style.json">Basic &amp; GSI Seamless Photo</option>
+        </optgroup>
+      </select>
+      <select
+        onChange={onMapLanguageChange}
+        defaultValue={defaultLanguageFromHash}
+      >
+        <option value="auto">Auto / 自動判定</option>
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+      </select>
+      <div role="radiogroup" aria-label="地図の描画ライブラリ" className="renderer-switch">
+        {RENDERERS.map(({ value, label }) => (
+          <label key={value}>
+            <input
+              type="radio"
+              name="renderer"
+              value={value}
+              checked={renderer === value}
+              onChange={handleRendererChange}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="stage-switch"
+        onClick={handleStageChange}
+      >
+        {stage}
+      </button>
+      <a
+        href={`https://openstreetmap.org/#map=${zLatLngString}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ext openstreetmap-link"
+      >
+        OpenStreetMap で開く
+      </a>
+    </div>
+  );
+
+  const searchPanel = (
+    <form id="searchControl" onSubmit={handleSearch}>
+      <input
+        type="search"
+        placeholder="検索..."
+        name="q"
+      />
+    </form>
+  );
+
+  if (renderer === 'mach-gl') {
+    return (
+      <Div100vh>
+        <MachGLMap
+          style={styleIdToUrl(style, resolveLanguage(language, navigator.languages, navigator.language))}
+          lang={language}
+          stage={stage}
+          center={initialCamera.center}
+          zoom={initialCamera.zoom}
+          transformRequest={transformRequest}
+          onLoad={onLoad}
+        >
+          {settingsPanel}
+          <div style={{ marginTop: '10px' }}>{searchPanel}</div>
+        </MachGLMap>
+      </Div100vh>
+    );
+  }
 
   return (
     <>
@@ -295,64 +401,10 @@ const App: React.FC = () => {
           <GeolocateControl />
           <CircleFlightButton />
           <Control position="top-left">
-            <select
-              onChange={onMapStyleChange}
-              defaultValue={defaultStyleFromHash}
-              style={{ marginRight: '10px' }}
-            >
-              <optgroup label="標準スタイル">
-                <option value="geolonia/basic-v2">Basic v2</option>
-                <option value="geolonia/gsi">GSI</option>
-                <option value="geolonia/homework">Homework</option>
-                <option value="geolonia/midnight">Midnight</option>
-                <option value="geolonia/notebook">Notebook</option>
-                <option value="geolonia/red-planet">Red Planet</option>
-              </optgroup>
-              <optgroup label="SmartCity用スタイル">
-                <option value="geoloniamaps/smartcity-base">SmartCity Base</option>
-              </optgroup>
-              <optgroup label="その他">
-                <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
-                <option value="https://geolonia.github.io/openstreetmap-carto/style.json">OSM Carto</option>
-              </optgroup>
-              <optgroup label="EXPERIMENTAL | 実験的">
-                <option value="https://raw.githubusercontent.com/geolonia/basic-gsiseamlessphoto/main/style.json">Basic &amp; GSI Seamless Photo</option>
-              </optgroup>
-            </select>
-            <select
-              onChange={onMapLanguageChange}
-              defaultValue={defaultLanguageFromHash}
-              style={{ marginRight: '10px' }}
-            >
-              <option value="auto">Auto / 自動判定</option>
-              <option value="ja">日本語</option>
-              <option value="en">English</option>
-            </select>
-            <a
-              href={`https://openstreetmap.org/#map=${zLatLngString}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ext openstreetmap-link"
-              style={{ marginRight: '10px' }}
-            >
-              OpenStreetMap で開く
-            </a>
-            <button
-              style={{}}
-              type="button"
-              onClick={handleStageChange}
-            >
-              {stage}
-            </button>
+            {settingsPanel}
           </Control>
           <Control position="top-left">
-            <form id="searchControl" onSubmit={handleSearch}>
-              <input
-                type="search"
-                placeholder="検索..."
-                name="q"
-              />
-            </form>
+            {searchPanel}
           </Control>
         </Map>
       </Div100vh>

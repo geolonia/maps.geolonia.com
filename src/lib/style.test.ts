@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { styleIdToUrl } from './style';
+import { resolveLanguage, styleIdToUrl } from './style';
 
 describe('styleIdToUrl', () => {
   it('returns a full URL unchanged', () => {
@@ -21,5 +21,27 @@ describe('styleIdToUrl', () => {
 
   it('drops everything after a semicolon when no language is given', () => {
     expect(styleIdToUrl('geolonia/gsi;extra')).toBe('geolonia/gsi');
+  });
+});
+
+describe('resolveLanguage', () => {
+  it('keeps a language that was chosen', () => {
+    expect(resolveLanguage('en', [ 'ja-JP' ])).toBe('en');
+    expect(resolveLanguage('ja', [ 'en-US' ])).toBe('ja');
+  });
+
+  it('picks Japanese for auto when the first browser language is ja or ja-JP', () => {
+    expect(resolveLanguage('auto', [ 'ja-JP', 'en-US' ])).toBe('ja');
+    expect(resolveLanguage('auto', [ 'ja' ])).toBe('ja');
+  });
+
+  it('picks English for auto otherwise, as maps-core does', () => {
+    expect(resolveLanguage('auto', [ 'en-US', 'ja-JP' ])).toBe('en');
+    expect(resolveLanguage('auto', [ 'ja-Hira' ])).toBe('en');
+    expect(resolveLanguage('auto', [])).toBe('en');
+  });
+
+  it('falls back to the single browser language when the list is empty', () => {
+    expect(resolveLanguage('auto', [], 'ja-JP')).toBe('ja');
   });
 });
