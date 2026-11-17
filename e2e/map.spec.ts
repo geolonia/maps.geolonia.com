@@ -191,6 +191,7 @@ test('keeps the order of the controls in the top-right corner', async ({ page })
     'maplibregl-ctrl-compass',
     'maplibregl-ctrl-geolocate',
     'maplibregl-ctrl-circle-flight',
+    'maplibregl-ctrl-tour',
   ]);
 });
 
@@ -279,6 +280,74 @@ test('stops the circle flight when the map is dragged', async ({ page }) => {
   const bearing = await page.evaluate(() => window._mainMap!.getBearing());
   await page.waitForTimeout(1_000);
   expect(await page.evaluate(() => window._mainMap!.getBearing())).toBe(bearing);
+});
+
+test('starts and stops the tour of the landmarks in Tokyo with its button', async ({ page }) => {
+  await page.goto('/#map=10/35.6812/139.7671/0/0&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const button = page.locator('.maplibregl-ctrl-tour');
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  await expect(button).toHaveAccessibleName('ツアー');
+  await expect(button).toHaveAttribute('title', 'ツアーを開始');
+
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+  await expect(button).toHaveAttribute('title', 'ツアーを停止');
+  // 中間の地点（ズーム 15.1）を過ぎて名所（ズーム 15.6 以上）まで寄り、斜めから見下ろす
+  await expect.poll(() => page.evaluate(() => window._mainMap!.getZoom()), { timeout: 10_000 }).toBeGreaterThan(15.4);
+  await expect.poll(() => page.evaluate(() => window._mainMap!.getPitch())).toBeGreaterThan(30);
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  const camera = await page.evaluate(() => ({ center: window._mainMap!.getCenter(), bearing: window._mainMap!.getBearing() }));
+  await page.waitForTimeout(1_000);
+  expect(await page.evaluate(() => ({ center: window._mainMap!.getCenter(), bearing: window._mainMap!.getBearing() }))).toEqual(camera);
+});
+
+test('stops the tour when the map is dragged', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671/0/0&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const button = page.locator('.maplibregl-ctrl-tour');
+  await button.click();
+  await expect(button).toHaveAttribute('aria-pressed', 'true');
+
+  const canvas = page.locator('.maplibregl-canvas');
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 50, box.y + box.height / 2 + 50, { steps: 5 });
+  await page.mouse.up();
+
+  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  const center = await page.evaluate(() => window._mainMap!.getCenter());
+  await page.waitForTimeout(1_000);
+  expect(await page.evaluate(() => window._mainMap!.getCenter())).toEqual(center);
+});
+
+test('stops the tour when the circle flight starts', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671/0/0&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const tour = page.locator('.maplibregl-ctrl-tour');
+  await tour.click();
+  await expect(tour).toHaveAttribute('aria-pressed', 'true');
+
+  await page.locator('.maplibregl-ctrl-circle-flight').click();
+  await expect(tour).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.maplibregl-ctrl-circle-flight')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('stops the circle flight when the tour starts', async ({ page }) => {
+  await page.goto('/#map=14/35.6812/139.7671/0/60&style=geolonia/basic-v2');
+  await waitForMap(page);
+  const circleFlight = page.locator('.maplibregl-ctrl-circle-flight');
+  await circleFlight.click();
+  await expect(circleFlight).toHaveAttribute('aria-pressed', 'true');
+
+  await page.locator('.maplibregl-ctrl-tour').click();
+  await expect(circleFlight).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.maplibregl-ctrl-tour')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.evaluate(() => window._mainMap!.getZoom()), { timeout: 10_000 }).toBeGreaterThan(15);
 });
 
 test.describe('with reduced motion', () => {

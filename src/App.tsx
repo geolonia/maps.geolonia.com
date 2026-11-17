@@ -12,6 +12,7 @@ import { overrideTilesetUrl } from './lib/tileset-override';
 import { coordinatesToFeatureCollection } from './lib/coordinates';
 import { nextStage, resolveStage } from './lib/stage';
 import { CircleFlightControl } from './lib/circle-flight-control';
+import { TourControl } from './lib/tour-control';
 import { pointBounds } from './lib/bounds';
 import { createZoomLimitsUpdater } from './lib/zoom-limits';
 import { isRenderer, RENDERERS, resolveRenderer } from './lib/renderer';
@@ -26,6 +27,13 @@ const createCircleFlightControl = () => new CircleFlightControl();
 // useControl は地図の中でしか呼べないので、コントロールごとにコンポーネントにする
 const CircleFlightButton: React.FC = () => {
   useControl(createCircleFlightControl, { position: 'top-right' });
+  return null;
+};
+
+const createTourControl = () => new TourControl();
+
+const TourButton: React.FC = () => {
+  useControl(createTourControl, { position: 'top-right' });
   return null;
 };
 
@@ -400,6 +408,7 @@ const App: React.FC = () => {
           <NavigationControl visualizePitch />
           <GeolocateControl />
           <CircleFlightButton />
+          <TourButton />
           <Control position="top-left">
             {settingsPanel}
           </Control>
