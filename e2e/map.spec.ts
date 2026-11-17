@@ -320,6 +320,8 @@ test('stops the tour when the map is dragged', async ({ page }) => {
   await page.mouse.up();
 
   await expect(button).toHaveAttribute('aria-pressed', 'false');
+  // ドラッグを離した後の慣性の移動が終わってから、止まった位置を取る
+  await expect.poll(() => page.evaluate(() => window._mainMap!.isMoving())).toBe(false);
   const center = await page.evaluate(() => window._mainMap!.getCenter());
   await page.waitForTimeout(1_000);
   expect(await page.evaluate(() => window._mainMap!.getCenter())).toEqual(center);
