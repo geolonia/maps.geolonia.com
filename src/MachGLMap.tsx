@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { IControl, Map as MaplibreMap } from 'maplibre-gl';
 import { CircleFlightControl } from './lib/circle-flight-control';
+import { TourControl } from './lib/tour-control';
 import { addPlateauBuildings, type PlateauMap } from './lib/plateau';
 
 // MachGL は選んだときだけ CDN から読む。MapLibre を使うときは読み込まない
@@ -131,7 +132,7 @@ const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transfor
       });
       mapRef.current = map;
 
-      // MachGL には MapLibre の stop() が無い。動いているカメラは jumpTo で止まるので、サークル飛行が使う stop() をそれで補う
+      // MachGL には MapLibre の stop() が無い。動いているカメラは jumpTo で止まるので、サークル飛行とツアーが使う stop() をそれで補う
       if (typeof map.stop !== 'function') {
         map.stop = () => map.jumpTo({});
       }
@@ -141,6 +142,7 @@ const MachGLMap: React.FC<Props> = ({ style, lang, stage, center, zoom, transfor
       map.addControl(new mach.NavigationControl({ visualizePitch: true }), 'top-right');
       map.addControl(new mach.GeolocateControl(), 'top-right');
       map.addControl(new CircleFlightControl(), 'top-right');
+      map.addControl(new TourControl(), 'top-right');
       map.addControl(new mach.ScaleControl(), 'bottom-right');
 
       const panelControl = new PanelControl();

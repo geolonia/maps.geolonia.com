@@ -36,6 +36,15 @@ a.ext:after {
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'%3E%3Crect x='9.5' y='9.5' width='10' height='10' rx='1.5' fill='%23333'/%3E%3C/svg%3E");
 }
 
+/* ツアーのボタン。止まっているときは再生の三角、巡っているときは停止の四角を出す */
+.maplibregl-ctrl button.maplibregl-ctrl-tour .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'%3E%3Cpath d='M11 8.5v12l10-6z' fill='%23333' stroke='%23333' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.maplibregl-ctrl button.maplibregl-ctrl-tour[aria-pressed="true"] .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 29 29'%3E%3Crect x='9.5' y='9.5' width='10' height='10' rx='1.5' fill='%23333'/%3E%3C/svg%3E");
+}
+
 /* 設定パネルの部品を 1 行に並べ、高さと縦の位置をそろえる */
 .settings-panel {
   display: flex;

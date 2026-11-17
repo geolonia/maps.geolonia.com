@@ -1,4 +1,5 @@
 import type { EaseToOptions } from 'maplibre-gl';
+import { claimCamera, releaseCamera, type CameraOwner } from './camera-owner';
 
 // 使うメソッドだけに絞り、テストでは偽の地図を渡せるようにする
 export type CircleFlightMap = {
@@ -23,7 +24,7 @@ const linear = (t: number) => t;
 const angleDifference = (a: number, b: number) => ((a - b) % 360 + 540) % 360 - 180;
 
 // ドローンのサークル飛行のように、地図の中心を軸にカメラを回し続ける
-export class CircleFlight {
+export class CircleFlight implements CameraOwner {
   private running = false;
   private targetBearing = 0;
 
@@ -36,24 +37,39 @@ export class CircleFlight {
   start() {
     if (this.running) return;
     this.running = true;
-    this.map.on('moveend', this.handleMoveEnd);
     for (const type of USER_EVENTS) {
       this.map.on(type, this.stop);
     }
+    claimCamera(this.map, this);
+    // MapLibre の easeTo は動いているカメラ（ほかのアニメーション）を止め、その moveend をその場で出す。それを自分の移動の終わりと取り違えないよう、最初の移動を始めてから受け取る
     this.rotate(this.map.getPitch() < MIN_PITCH ? FLIGHT_PITCH : undefined);
+    this.map.on('moveend', this.handleMoveEnd);
   }
 
   stop = () => {
+    this.finish(true);
+  };
+
+  // 同じ地図でほかの機能がカメラを動かし始めた
+  yieldCamera() {
+    this.finish(false);
+  }
+
+  // ほかの操作がカメラを動かし始めて止まるときは、その動きを止めないよう map.stop() を呼ばない
+  private finish(stopCamera: boolean) {
     if (!this.running) return;
     this.running = false;
+    releaseCamera(this.map, this);
     // map.stop() が moveend を出すので、先に外す
     this.map.off('moveend', this.handleMoveEnd);
     for (const type of USER_EVENTS) {
       this.map.off(type, this.stop);
     }
-    this.map.stop();
+    if (stopCamera) {
+      this.map.stop();
+    }
     this.onStop?.();
-  };
+  }
 
   private rotate(pitch?: number) {
     this.targetBearing = this.map.getBearing() + STEP_DEGREES;
@@ -65,7 +81,7 @@ export class CircleFlight {
   // 1/4 周を回り切る前に止まったときは、ほかの操作がカメラを動かしたので止める
   private handleMoveEnd = () => {
     if (Math.abs(angleDifference(this.map.getBearing(), this.targetBearing)) > 0.01) {
-      this.stop();
+      this.finish(false);
       return;
     }
     this.rotate();

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { Tour } from './tour';
 import { CircleFlight, type CircleFlightMap } from './circle-flight';
 
 type EaseToOptions = Parameters<CircleFlightMap['easeTo']>[0];
@@ -12,6 +13,7 @@ const createFakeMap = (bearing = 0, pitch = 0) => {
   const map = {
     getBearing: () => ((bearing + 180) % 360 + 360) % 360 - 180,
     getPitch: () => pitch,
+    getCenter: () => ({ lng: 139, lat: 35 }),
     easeTo,
     stop: vi.fn(),
     on: (type: string, listener: () => void) => {
@@ -105,6 +107,28 @@ describe('CircleFlight', () => {
     expect(flight.isRunning()).toBe(false);
     expect(onStop).toHaveBeenCalledTimes(1);
     expect(map.easeTo).toHaveBeenCalledTimes(1);
+    // カメラを動かしているほかの操作（ツアーなど）を止めない
+    expect(map.stop).not.toHaveBeenCalled();
+  });
+
+  it('keeps going when its first move stops another animation, which fires moveend at once', () => {
+    const { map, fire } = createFakeMap();
+    // MapLibre の easeTo は、動いているカメラを止めてその moveend をその場で出してから動き出す
+    map.easeTo.mockImplementationOnce(() => fire('moveend'));
+    const flight = new CircleFlight(map);
+    flight.start();
+    expect(flight.isRunning()).toBe(true);
+  });
+
+  it('stops without stopping the camera when the tour starts on the same map', () => {
+    const { map } = createFakeMap();
+    const onStop = vi.fn();
+    const self = new CircleFlight(map, onStop);
+    self.start();
+    new Tour(map as never).start();
+    expect(self.isRunning()).toBe(false);
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(map.stop).not.toHaveBeenCalled();
   });
 
   it('does nothing when started twice', () => {
