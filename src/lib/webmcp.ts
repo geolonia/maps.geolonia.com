@@ -86,11 +86,17 @@ const readNumber = (input: Record<string, unknown>, key: string, min: number, ma
   return value;
 };
 
-const readChoice = <T extends string>(input: Record<string, unknown>, key: string, choices: readonly T[]): T | undefined => {
+// choicesText は、選択肢が多くて並べると長いときに、代わりに案内する文
+const readChoice = <T extends string>(
+  input: Record<string, unknown>,
+  key: string,
+  choices: readonly T[],
+  choicesText = choices.join(', '),
+): T | undefined => {
   const value = input[key];
   if (value === undefined) return undefined;
   if (typeof value !== 'string' || !(choices as readonly string[]).includes(value)) {
-    throw new ToolError(`${key} は ${choices.join(', ')} のどれかで指定してください`);
+    throw new ToolError(`${key} は ${choicesText} のどれかで指定してください`);
   }
   return value as T;
 };
@@ -163,7 +169,7 @@ const setMapStyle = (deps: MapToolDeps): McpTool => {
     },
     execute: withErrorText(async (input) => {
       // スタイルの URL は地図がそのまま読むので、モデルから任意の URL を渡せないよう、一覧にあるものだけ通す
-      const style = readChoice(input, 'style', ids);
+      const style = readChoice(input, 'style', ids, 'list_map_styles が返す id');
       if (style === undefined) throw new ToolError('style を指定してください。選べるスタイルは list_map_styles で調べられます');
       deps.setStyle(style);
       const name = ALL_STYLES.find(({ value }) => value === style)?.label ?? style;

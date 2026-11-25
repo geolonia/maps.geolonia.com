@@ -146,7 +146,7 @@ describe('set_map_style', () => {
     const { deps } = createDeps();
     const tool = findTool(createMapTools(deps), 'set_map_style');
 
-    await expect(tool.execute({ style: 'https://example.com/style.json' })).resolves.toMatch(/^エラー: style は/);
+    await expect(tool.execute({ style: 'https://example.com/style.json' })).resolves.toBe('エラー: style は list_map_styles が返す id のどれかで指定してください');
     await expect(tool.execute({})).resolves.toMatch(/^エラー: style を指定/);
     expect(deps.setStyle).not.toHaveBeenCalled();
   });
