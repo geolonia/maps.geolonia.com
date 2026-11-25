@@ -159,7 +159,9 @@ describe('move_map', () => {
 
     const result = await tool.execute({ lat: 34.6937, lng: 135.5023, zoom: 16 });
 
-    expect(map.flyTo).toHaveBeenCalledWith({ center: [135.5023, 34.6937], zoom: 16, duration: undefined, essential: true });
+    // duration を undefined で渡すと MapLibre の既定値を上書きしてしまうので、キー自体が無いことを確かめる
+    expect(map.flyTo).toHaveBeenCalledWith({ center: [135.5023, 34.6937], zoom: 16, essential: true });
+    expect(Object.keys(map.flyTo.mock.calls[0][0] as object)).not.toContain('duration');
     expect(map.jumpTo).not.toHaveBeenCalled();
     expect(result).toContain('（fly）');
     expect(result).toContain('"zoom":14.23');
@@ -237,6 +239,7 @@ describe('move_map', () => {
     [{ lat: 0, lng: 181 }, 'lng'],
     [{ zoom: 25 }, 'zoom'],
     [{ zoom: -1 }, 'zoom'],
+    [{ pitch: 61 }, 'pitch'],
     [{ pitch: 90 }, 'pitch'],
     [{ lat: 'x', lng: 0 }, 'lat'],
     [{ zoom: 5, duration: 99999 }, 'duration'],
@@ -275,13 +278,32 @@ describe('search_places', () => {
 
     const result = JSON.parse(await findTool(createMapTools({ ...deps, search }), 'search_places').execute({ query: ' 大阪市役所 ' }));
 
-    expect(search).toHaveBeenCalledWith(map, '大阪市役所');
+    expect(search).toHaveBeenCalledWith(map, '大阪市役所', { beforeFit: expect.any(Function) });
     expect(result.total).toBe(2);
     expect(result.results).toEqual([
       { name: '大阪市役所', lat: 34.6937, lng: 135.5023 },
       { name: '北緯34.7°, 東経135.5°', lat: 34.7, lng: 135.5 },
     ]);
     expect(result.state.zoom).toBe(14.23);
+  });
+
+  it('keeps the circle flight going when the search fails, and stops it only when the camera is about to move', async () => {
+    const flight = createAnimation(true);
+    register('circle-flight', flight);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const failing = createDeps({ search: vi.fn(async () => { throw new Error('検索に失敗しました'); }) });
+    await findTool(createMapTools(failing.deps), 'search_places').execute({ query: 'x' });
+    expect(flight.stop).not.toHaveBeenCalled();
+
+    const moving = createDeps({
+      search: vi.fn(async (_map, _query, options) => {
+        options?.beforeFit?.();
+        return osaka;
+      }),
+    });
+    await findTool(createMapTools(moving.deps), 'search_places').execute({ query: 'x' });
+    expect(flight.stop).toHaveBeenCalledTimes(1);
   });
 
   it('returns at most 10 places', async () => {

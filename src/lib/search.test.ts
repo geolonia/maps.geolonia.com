@@ -26,7 +26,7 @@ describe('searchPlaces', () => {
     const map = createMap();
     const fetchApi = apiResponse({});
 
-    const data = await searchPlaces(map, '34.6937, 135.5023', fetchApi);
+    const data = await searchPlaces(map, '34.6937, 135.5023', { fetchApi });
 
     expect(fetchApi).not.toHaveBeenCalled();
     expect(data.features[0].geometry).toEqual({ type: 'Point', coordinates: [135.5023, 34.6937] });
@@ -36,7 +36,7 @@ describe('searchPlaces', () => {
     const map = createMap();
     const fetchApi = apiResponse({ geojson: osaka });
 
-    const data = await searchPlaces(map, '大阪市役所', fetchApi);
+    const data = await searchPlaces(map, '大阪市役所', { fetchApi });
 
     const url = new URL(String(fetchApi.mock.calls[0][0]));
     expect(url.origin + url.pathname).toBe('https://api.maps.geolonia.com/v1/search');
@@ -49,7 +49,7 @@ describe('searchPlaces', () => {
     const map = createMap();
     const fetchApi = apiResponse({ error: true, message: 'quota' });
 
-    await expect(searchPlaces(map, '大阪市役所', fetchApi)).rejects.toThrow('検索');
+    await expect(searchPlaces(map, '大阪市役所', { fetchApi })).rejects.toThrow('検索');
     expect(map.addSource).not.toHaveBeenCalled();
     expect(map.fitBounds).not.toHaveBeenCalled();
   });
@@ -57,7 +57,7 @@ describe('searchPlaces', () => {
   it('adds the source and the three layers the first time, then fits the results', async () => {
     const map = createMap();
 
-    await searchPlaces(map, '大阪市役所', apiResponse({ geojson: osaka }));
+    await searchPlaces(map, '大阪市役所', { fetchApi: apiResponse({ geojson: osaka }) });
 
     expect(map.addSource).toHaveBeenCalledWith('search-results', { type: 'geojson', data: osaka });
     expect(map.addLayer.mock.calls.map(([layer]) => layer.id)).toEqual([
@@ -70,7 +70,7 @@ describe('searchPlaces', () => {
     const setData = vi.fn();
     const map = createMap({ type: 'geojson', setData });
 
-    await searchPlaces(map, '大阪市役所', apiResponse({ geojson: osaka }));
+    await searchPlaces(map, '大阪市役所', { fetchApi: apiResponse({ geojson: osaka }) });
 
     expect(setData).toHaveBeenCalledWith(osaka);
     expect(map.addSource).not.toHaveBeenCalled();
@@ -79,8 +79,28 @@ describe('searchPlaces', () => {
   it('does not move the camera when there is no point to show', async () => {
     const map = createMap();
 
-    await searchPlaces(map, '見つからない場所', apiResponse({ geojson: { type: 'FeatureCollection', features: [] } }));
+    await searchPlaces(map, '見つからない場所', { fetchApi: apiResponse({ geojson: { type: 'FeatureCollection', features: [] } }) });
 
     expect(map.fitBounds).not.toHaveBeenCalled();
+  });
+
+  it('calls beforeFit right before it moves the camera', async () => {
+    const map = createMap();
+    const order: string[] = [];
+    map.fitBounds.mockImplementation(() => order.push('fitBounds'));
+
+    await searchPlaces(map, '大阪市役所', { fetchApi: apiResponse({ geojson: osaka }), beforeFit: () => order.push('beforeFit') });
+
+    expect(order).toEqual(['beforeFit', 'fitBounds']);
+  });
+
+  it('does not call beforeFit when the search fails or there is nothing to move to', async () => {
+    const beforeFit = vi.fn();
+
+    await expect(searchPlaces(createMap(), 'x', { fetchApi: apiResponse({ error: true }), beforeFit })).rejects.toThrow();
+    await searchPlaces(createMap(), 'x', { fetchApi: apiResponse({ geojson: { type: 'FeatureCollection', features: [] } }), beforeFit });
+    await searchPlaces(createMap({ type: 'vector', setData: vi.fn() }), 'x', { fetchApi: apiResponse({ geojson: osaka }), beforeFit });
+
+    expect(beforeFit).not.toHaveBeenCalled();
   });
 });

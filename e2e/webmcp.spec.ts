@@ -197,3 +197,51 @@ test('refuses a style that is not offered, with a reason the model can read', as
   expect(await callTool(page, 'set_map_style', { style: 'https://example.com/style.json' })).toMatch(/^エラー: style は/);
   await expect(styleSelect(page)).toHaveValue('geolonia/basic-v2');
 });
+
+test('eases to the destination when move_map is not given a duration', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await installFakeModelContext(page);
+  await page.goto('/#map=14/35.6812/139.7671&style=geolonia/basic-v2');
+  await waitForMap(page);
+
+  const result = await callTool(page, 'move_map', { lat: 34.6937, lng: 135.5023, animation: 'ease' });
+
+  expect(result).not.toContain('まだ移動中');
+  expect(await page.evaluate(() => window._mainMap!.isMoving())).toBe(false);
+  expect(JSON.parse(result.slice(result.indexOf('{'))).center).toEqual({ lat: 34.6937, lng: 135.5023 });
+  expect(errors).toEqual([]);
+});
+
+test.describe('move_map without a new center', () => {
+  test('turns and tilts the camera', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await installFakeModelContext(page);
+    await page.goto('/#map=14/35.6812/139.7671/0/0&style=geolonia/basic-v2');
+    await waitForMap(page);
+
+    const result = await callTool(page, 'move_map', { bearing: 90, pitch: 50 });
+
+    expect(result).not.toContain('まだ移動中');
+    const { bearing, pitch } = await page.evaluate(() => ({ bearing: window._mainMap!.getBearing(), pitch: window._mainMap!.getPitch() }));
+    expect(bearing).toBeCloseTo(90, 1);
+    expect(pitch).toBeCloseTo(50, 1);
+    expect(errors).toEqual([]);
+  });
+
+  test('returns at once for the place the camera is already at', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    await installFakeModelContext(page);
+    await page.goto('/#map=14/35.6812/139.7671&style=geolonia/basic-v2');
+    await waitForMap(page);
+
+    const start = Date.now();
+    const result = await callTool(page, 'move_map', { lat: 35.6812, lng: 139.7671, zoom: 14 });
+
+    expect(Date.now() - start).toBeLessThan(10_000);
+    expect(result).not.toContain('まだ移動中');
+    expect(errors).toEqual([]);
+  });
+});

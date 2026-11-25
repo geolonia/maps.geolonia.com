@@ -43,8 +43,8 @@ export type MapToolDeps = {
 };
 
 const MAX_ZOOM = 22;
-// MapLibre の既定の上限は 60 度だが、v6 は 85 度まで設定できる
-const MAX_PITCH = 85;
+// この画面の地図は MapLibre の既定の上限（60 度）で止まる。ツアーの傾きの上限（tour.ts）と同じ
+const MAX_PITCH = 60;
 const MAX_DURATION = 60_000;
 // flyTo は距離に応じて長くなる。それでも終わらないときは待つのをやめて、今の状態を返す
 const DEFAULT_WAIT = 20_000;
@@ -225,8 +225,9 @@ const moveMap = (deps: MapToolDeps): McpTool => ({
     stopCameraAnimations();
     const animate = animation === 'fly' ? (map.flyTo ?? map.easeTo) : animation === 'ease' ? map.easeTo : undefined;
     if (animate) {
+      // duration を undefined のまま渡すと、MapLibre の既定値（500）を上書きして、アニメーションが NaN のまま止まる。未指定ならキーごと省く。
       // 動きを減らす OS の設定でも、頼まれた移動なので essential にする
-      animate.call(map, { ...camera, duration, essential: true });
+      animate.call(map, { ...camera, ...(duration !== undefined && { duration }), essential: true });
       // easeTo は動いているカメラの moveend をその場で出すので、移動を始めてから待ち始める
       await waitForCamera(map, (duration ?? DEFAULT_WAIT) + WAIT_MARGIN);
     } else {
@@ -252,8 +253,8 @@ const searchPlacesTool = (deps: MapToolDeps): McpTool => ({
       throw new ToolError(`query は 1 から ${MAX_QUERY_LENGTH} 文字の文字列で指定してください`);
     }
     const map = requireMap(deps);
-    stopCameraAnimations();
-    const data = await (deps.search ?? searchPlaces)(map, query);
+    // 検索が失敗したり、動く先が無かったりしても止めないよう、地図を動かす直前に止める
+    const data = await (deps.search ?? searchPlaces)(map, query, { beforeFit: stopCameraAnimations });
     // 寄る動きが終わってから返す。動かない結果（0 件など）では待たない
     await waitForCamera(map, DEFAULT_WAIT + WAIT_MARGIN);
 

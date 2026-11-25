@@ -197,7 +197,9 @@ const App: React.FC = () => {
 
   // WebMCP（実験）。対応するブラウザでだけ、地図の操作をエージェントに公開する。ツールは使われる時点の値を読むので、ref 越しに渡す
   const webMcpStateRef = useRef({ style, language, renderer });
-  webMcpStateRef.current = { style, language, renderer };
+  useEffect(() => {
+    webMcpStateRef.current = { style, language, renderer };
+  }, [style, language, renderer]);
   useEffect(() => registerMapTools(document, {
     getMap: () => mapRef.current,
     getStyle: () => webMcpStateRef.current.style,

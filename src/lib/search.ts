@@ -78,10 +78,16 @@ const addResultLayers = (map: SearchMap) => {
 
 // 緯度経度ならそのまま、そうでなければ地名として検索し、結果を地図に描いて寄る。結果の GeoJSON を返す。
 // 検索 API が失敗を返したときは、地図に触れずに投げる
+export type SearchOptions = {
+  fetchApi?: typeof fetch
+  // 地図を動かす直前に呼ぶ。検索が失敗したときや、動かす結果が無いときは呼ばない
+  beforeFit?: () => void
+};
+
 export const searchPlaces = async (
   map: SearchMap,
   query: string,
-  fetchApi: typeof fetch = (...args) => fetch(...args),
+  { fetchApi = (...args) => fetch(...args), beforeFit }: SearchOptions = {},
 ): Promise<SearchResults> => {
   let data: SearchResults;
   const queriesInCoord = normalize(query).filter((coord) => coord.lat !== null && coord.lng !== null);
@@ -115,6 +121,7 @@ export const searchPlaces = async (
 
   const bounds = pointBounds(data);
   if (typeof bounds !== 'undefined') {
+    beforeFit?.();
     // 結果が 1 件だと範囲の大きさが 0 になり、上限まで寄ってしまうので、街区が見える程度で止める
     map.fitBounds(bounds, { padding: 200, maxZoom: 17 });
   }
