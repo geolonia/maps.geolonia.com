@@ -17,3 +17,13 @@ export const resolveLanguage = (lang: string, browserLanguages: readonly string[
   const first = (browserLanguages[0] || browserLanguage || '').toLowerCase();
   return first === 'ja' || first === 'ja-jp' ? 'ja' : 'en';
 };
+
+// 標準スタイル。設定パネルの選択肢と、WebMCP の set_map_style が受け付ける値はここから作る
+export const STANDARD_STYLES: { value: string, label: string }[] = [
+  { value: 'geolonia/basic-v2', label: 'Basic v2' },
+  { value: 'geolonia/gsi', label: 'GSI' },
+  { value: 'geolonia/homework', label: 'Homework' },
+  { value: 'geolonia/midnight', label: 'Midnight' },
+  { value: 'geolonia/notebook', label: 'Notebook' },
+  { value: 'geolonia/red-planet', label: 'Red Planet' },
+];

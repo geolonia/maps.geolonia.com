@@ -5,7 +5,7 @@ import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
 import { normalize } from '@geolonia/normalize-any-latlng';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './lib/hash';
-import { resolveLanguage, styleIdToUrl } from './lib/style';
+import { resolveLanguage, STANDARD_STYLES, styleIdToUrl } from './lib/style';
 import { getCurrentSavedState, getDefaultCameraOptions, type InitialSavedState } from './lib/saved-state';
 import { formatCameraHash, formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
@@ -16,6 +16,7 @@ import { TourControl } from './lib/tour-control';
 import { pointBounds } from './lib/bounds';
 import { createZoomLimitsUpdater } from './lib/zoom-limits';
 import { isRenderer, RENDERERS, resolveRenderer } from './lib/renderer';
+import { registerMapTools } from './lib/webmcp';
 import MachGLMap from './MachGLMap';
 
 interface SearchFormControlsCollection extends HTMLFormControlsCollection {
@@ -96,11 +97,14 @@ const App: React.FC = () => {
     return { url: overrideTilesetUrl(url, replaceMap) };
   }, []);
 
-  const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
-    const val = ev.target.value;
+  const changeStyle = useCallback((val: string) => {
     setStyle(val);
     setSavedState({ style: val });
   }, [setSavedState]);
+
+  const onMapStyleChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
+    changeStyle(ev.target.value);
+  }, [changeStyle]);
 
   const onMapLanguageChange: React.ChangeEventHandler<HTMLSelectElement> = useCallback((ev) => {
     const val = ev.target.value;
@@ -288,19 +292,28 @@ const App: React.FC = () => {
     reloadWithHashParam('renderer', newRenderer);
   }, [renderer, reloadWithHashParam]);
 
+  // WebMCP（実験）。対応するブラウザでだけ、地図の操作をエージェントに公開する。ツールは使われる時点の値を読むので、ref 越しに渡す
+  const webMcpStateRef = useRef({ style, language, renderer });
+  webMcpStateRef.current = { style, language, renderer };
+  useEffect(() => registerMapTools(document, {
+    getMap: () => mapRef.current,
+    getStyle: () => webMcpStateRef.current.style,
+    setStyle: changeStyle,
+    getLanguage: () => webMcpStateRef.current.language,
+    getRenderer: () => webMcpStateRef.current.renderer,
+  }), [changeStyle]);
+
   const settingsPanel = (
     <div className="settings-panel">
+      {/* WebMCP のツールからも変わるので、表示は state に合わせる */}
       <select
         onChange={onMapStyleChange}
-        defaultValue={defaultStyleFromHash}
+        value={style}
       >
         <optgroup label="標準スタイル">
-          <option value="geolonia/basic-v2">Basic v2</option>
-          <option value="geolonia/gsi">GSI</option>
-          <option value="geolonia/homework">Homework</option>
-          <option value="geolonia/midnight">Midnight</option>
-          <option value="geolonia/notebook">Notebook</option>
-          <option value="geolonia/red-planet">Red Planet</option>
+          {STANDARD_STYLES.map(({ value, label }) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
         </optgroup>
         <optgroup label="SmartCity用スタイル">
           <option value="geoloniamaps/smartcity-base">SmartCity Base</option>
@@ -315,7 +328,7 @@ const App: React.FC = () => {
       </select>
       <select
         onChange={onMapLanguageChange}
-        defaultValue={defaultLanguageFromHash}
+        value={language}
       >
         <option value="auto">Auto / 自動判定</option>
         <option value="ja">日本語</option>
