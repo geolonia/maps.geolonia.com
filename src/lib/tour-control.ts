@@ -1,4 +1,5 @@
 import type { IControl, Map as MaplibreMap } from 'maplibre-gl';
+import { registerCameraAnimation, type CameraAnimation } from './camera-animations';
 import { Tour } from './tour';
 
 // 読み上げでは押されているかを aria-pressed で伝えるので、名前は変えない。変わるのはマウスを載せたときの説明だけにする
@@ -7,10 +8,11 @@ const START_TITLE = 'ツアーを開始';
 const STOP_TITLE = 'ツアーを停止';
 
 // 東京の名所を巡るツアーを開始・停止するボタン。MapLibre の標準コントロールと同じ見た目にする
-export class TourControl implements IControl {
+export class TourControl implements IControl, CameraAnimation {
   private container?: HTMLElement;
   private button?: HTMLButtonElement;
   private tour?: Tour;
+  private unregister?: () => void;
 
   onAdd(map: MaplibreMap) {
     this.tour = new Tour(map, () => this.render());
@@ -28,10 +30,14 @@ export class TourControl implements IControl {
     this.button.addEventListener('click', this.toggle);
     this.container.appendChild(this.button);
     this.render();
+    // WebMCP のツールも、このボタンと同じ実体を動かす
+    this.unregister = registerCameraAnimation('tour', this);
     return this.container;
   }
 
   onRemove() {
+    this.unregister?.();
+    this.unregister = undefined;
     this.tour?.stop();
     this.container?.remove();
     this.container = undefined;
@@ -39,14 +45,26 @@ export class TourControl implements IControl {
     this.tour = undefined;
   }
 
-  private toggle = () => {
-    if (!this.tour) return;
-    if (this.tour.isRunning()) {
-      this.tour.stop();
-    } else {
-      this.tour.start();
-    }
+  isRunning() {
+    return this.tour?.isRunning() ?? false;
+  }
+
+  start() {
+    this.tour?.start();
     this.render();
+  }
+
+  stop() {
+    this.tour?.stop();
+    this.render();
+  }
+
+  private toggle = () => {
+    if (this.isRunning()) {
+      this.stop();
+    } else {
+      this.start();
+    }
   };
 
   private render() {

@@ -1,19 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type GeoJSONSource, type Map as MaplibreMap } from 'maplibre-gl';
+import { type Map as MaplibreMap } from 'maplibre-gl';
 import { Control, FullscreenControl, GeolocateControl, Map, NavigationControl, useControl } from '@geolonia/maps-react';
-import { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 import Div100vh from 'react-div-100vh';
-import { normalize } from '@geolonia/normalize-any-latlng';
 import { parseHash, parseTilesetOverrideHash, updateHash } from './lib/hash';
-import { resolveLanguage, STANDARD_STYLES, styleIdToUrl } from './lib/style';
+import { resolveLanguage, STYLE_GROUPS, styleIdToUrl } from './lib/style';
 import { getCurrentSavedState, getDefaultCameraOptions, type InitialSavedState } from './lib/saved-state';
 import { formatCameraHash, formatPosition } from './lib/position';
 import { overrideTilesetUrl } from './lib/tileset-override';
-import { coordinatesToFeatureCollection } from './lib/coordinates';
 import { nextStage, resolveStage } from './lib/stage';
 import { CircleFlightControl } from './lib/circle-flight-control';
 import { TourControl } from './lib/tour-control';
-import { pointBounds } from './lib/bounds';
+import { searchPlaces, type SearchMap } from './lib/search';
 import { createZoomLimitsUpdater } from './lib/zoom-limits';
 import { isRenderer, RENDERERS, resolveRenderer } from './lib/renderer';
 import { registerMapTools } from './lib/webmcp';
@@ -136,105 +133,11 @@ const App: React.FC = () => {
       return;
     }
 
-    let data: FeatureCollection<Geometry, GeoJsonProperties>;
-    const queriesInCoord = normalize(query).filter((coord) => coord.lat !== null && coord.lng !== null);
-
-    if (queriesInCoord.length > 0) {
-      data = coordinatesToFeatureCollection(queriesInCoord as { lat: number, lng: number }[]);
-    } else {
-      const qsa = new URLSearchParams();
-      qsa.set('q', query);
-      const {lng, lat} = map.getCenter();
-      qsa.set('pos', `${lng},${lat}`);
-      const resp = await fetch(
-        `https://api.maps.geolonia.com/v1/search?${qsa.toString()}`, {
-          method: 'get',
-        },
-      );
-      const body = await resp.json();
-      if (body.error === true) {
-        // eslint-disable-next-line no-console
-        console.error(body);
-        return;
-      }
-
-      data = body.geojson as FeatureCollection<Geometry, GeoJsonProperties>;
-    }
-
-    const source = map.getSource('search-results');
-    if (source) {
-      if (source.type !== 'geojson') return;
-      const geoJsonSource = source as GeoJSONSource;
-      geoJsonSource.setData(data);
-    } else {
-      map.addSource('search-results', {
-        type: 'geojson',
-        data,
-      });
-    }
-
-    if (!map.getLayer('search-results-circle')) {
-      const textColor = '#000000';
-      const textHaloColor = '#FFFFFF';
-      const backgroundColor = 'rgba(255, 0, 0, 0.4)';
-      const strokeColor = '#FFFFFF';
-
-      map.addLayer({
-        id: 'search-results-circle',
-        type: 'circle',
-        source: 'search-results',
-        paint: {
-          'circle-radius': 13,
-          'circle-color': ['string', ['get', 'marker-color'], backgroundColor],
-          'circle-opacity': ['number', ['get', 'fill-opacity'], 1.0],
-          'circle-stroke-width': ['number', ['get', 'stroke-width'], 1],
-          'circle-stroke-color': ['string', ['get', 'stroke'], strokeColor],
-          'circle-stroke-opacity': ['number', ['get', 'stroke-opacity'], 1.0],
-        },
-      });
-
-      map.addLayer({
-        id: 'search-results-symbol',
-        type: 'symbol',
-        source: 'search-results',
-        layout: {
-          'text-field': ['get', 'index'],
-          'text-size': 14,
-          'text-font': ['Noto Sans Regular'],
-          'text-allow-overlap': true,
-        },
-      });
-
-      map.addLayer({
-        id: 'search-results-label',
-        type: 'symbol',
-        source: 'search-results',
-        paint: {
-          'text-color': ['string', ['get', 'text-color'], textColor],
-          'text-halo-color': ['string', ['get', 'text-halo-color'], textHaloColor],
-          'text-halo-width': 1,
-        },
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-font': ['Noto Sans Regular'],
-          'text-size': 12,
-          'text-anchor': 'top',
-          'text-max-width': 12,
-          'text-offset': [
-            'case',
-            ['==', 'small', ['get', 'marker-size']], ['literal', [0, 0.6]],
-            ['==', 'large', ['get', 'marker-size']], ['literal', [0, 1.2]],
-            ['literal', [0, 0.8]],
-          ],
-          'text-allow-overlap': false,
-        },
-      });
-    }
-
-    const bounds = pointBounds(data);
-    if (typeof bounds !== 'undefined') {
-      // 結果が 1 件だと範囲の大きさが 0 になり、上限まで寄ってしまうので、街区が見える程度で止める
-      map.fitBounds(bounds, { padding: 200, maxZoom: 17 });
+    try {
+      await searchPlaces(map as unknown as SearchMap, query);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
     }
   }, []);
 
@@ -310,21 +213,13 @@ const App: React.FC = () => {
         onChange={onMapStyleChange}
         value={style}
       >
-        <optgroup label="標準スタイル">
-          {STANDARD_STYLES.map(({ value, label }) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </optgroup>
-        <optgroup label="SmartCity用スタイル">
-          <option value="geoloniamaps/smartcity-base">SmartCity Base</option>
-        </optgroup>
-        <optgroup label="その他">
-          <option value="https://raw.githubusercontent.com/geolonia/butter/main/style.json">Butter</option>
-          <option value="https://geolonia.github.io/openstreetmap-carto/style.json">OSM Carto</option>
-        </optgroup>
-        <optgroup label="EXPERIMENTAL | 実験的">
-          <option value="https://raw.githubusercontent.com/geolonia/basic-gsiseamlessphoto/main/style.json">Basic &amp; GSI Seamless Photo</option>
-        </optgroup>
+        {STYLE_GROUPS.map(({ label, styles }) => (
+          <optgroup key={label} label={label}>
+            {styles.map(({ value, label: styleLabel }) => (
+              <option key={value} value={value}>{styleLabel}</option>
+            ))}
+          </optgroup>
+        ))}
       </select>
       <select
         onChange={onMapLanguageChange}
